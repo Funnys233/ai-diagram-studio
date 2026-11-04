@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>登录 · Diagram Studio</title><link rel="stylesheet" href="style.css"></head>
+<body class="cloud-login">
+ <main class="cloud-login-card">
+  <h1>Diagram Studio</h1><p>登录后使用平台模型，或添加自己的 API。</p>
+  <form id="loginForm" method="post" action="/api/auth/login">
+   <label>账号<input id="loginUsername" name="username" autocomplete="username" required maxlength="40"></label>
+   <label>密码<input id="loginPassword" name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
+   <button class="banner-btn primary" type="submit" id="loginBtn">登录</button>
+   <p id="loginError" role="alert"></p>
+  </form>
+  <p class="check-note">还没有账号？<a id="registerLink" href="/register.html">注册体验账号</a></p>
+ </main>
+ <script src="auth-redirect.js"></script><script src="login.js"></script>
+</body></html>

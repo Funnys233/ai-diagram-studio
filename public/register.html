@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>注册 · Diagram Studio</title><link rel="stylesheet" href="style.css"></head>
+<body class="cloud-login"><main class="cloud-login-card">
+ <h1>创建体验账号</h1><p>体验用户可使用三个全站免费模型，与所有用户共用每日次数。</p>
+ <form id="registerForm" method="post" action="/api/auth/register">
+  <label>账号<input id="registerUsername" name="username" autocomplete="username" required minlength="3" maxlength="40" placeholder="3–40 位字母、数字、点、横线或下划线"></label>
+  <label>密码<input id="registerPassword" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" placeholder="至少 8 位，可只用数字"></label>
+  <label>确认密码<input id="registerConfirm" type="password" autocomplete="new-password" required minlength="8" maxlength="128" placeholder="再次输入密码"></label>
+  <button class="banner-btn primary" type="submit" id="registerBtn">注册并开始体验</button><p id="registerError" role="alert"></p>
+ </form>
+ <p class="check-note">体验用户不开放共享 GPT、中转和个人 API，可联系管理员升级。</p>
+ <p class="check-note">已有账号？<a id="loginLink" href="/login.html">去登录</a></p>
+</main><script src="auth-redirect.js"></script><script src="register.js"></script></body></html>

@@ -1,0 +1,88 @@
+/* Keep the composer compact; model controls appear only when requested. */
+.compose-card,.composer{position:relative;background:#fff;border:1px solid #dfe5dc;border-radius:16px;box-shadow:0 3px 16px #253a2a06;overflow:visible}
+.compose-card:focus-within,.composer:focus-within{border-color:#a9bca5;box-shadow:0 0 0 2px #6a896908}
+.input-bar{padding:8px 14px 14px;gap:0}.compose-card{width:100%;padding:4px 10px 7px}
+.chat-compose #chatInput{min-height:42px;max-height:140px;padding:10px 4px 6px;border:0;border-radius:0;background:transparent;box-shadow:none;font-size:13px}
+.chat-compose #chatInput:focus{border:0;box-shadow:none}
+.composer{padding:5px 10px 7px}.composer textarea{min-height:42px;padding:8px 4px 6px}
+.composer-bottom{margin:0;padding:1px 0 0;gap:6px}.composer-tools,.compose-tools{display:flex;align-items:center;gap:4px;flex:1;min-width:0}
+.composer-tools>button{width:28px;height:28px;flex:none}.compose-footer{display:flex;align-items:center;gap:6px;min-height:32px}
+.compose-footer .attach-image-btn{position:static;width:28px;height:28px;flex:none;color:#5f6b5a}
+.compose-footer .send-btn{position:static;width:30px;height:30px;border-radius:9px;flex:none;margin-left:auto}
+.compose-footer .cancel-btn{position:static;flex:none;margin-left:auto;height:30px;padding:0 10px}
+.composer-settings{position:static;flex:0 1 260px;min-width:0;max-width:100%;color:#64725f;font-size:11px}
+.composer-settings>summary{display:flex;align-items:center;gap:5px;min-width:0;height:28px;padding:0 8px 0 7px;list-style:none;border:1px solid transparent;border-radius:8px;cursor:pointer;user-select:none;white-space:nowrap;transition:background .16s,border-color .16s}
+.composer-settings>summary::-webkit-details-marker{display:none}
+.composer-settings>summary:hover,.composer-settings[open]>summary{background:#f4f6f1;border-color:#e8ece3}
+.compose-summary-model{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:11px;font-weight:550;color:#4d5a4f}
+.compose-summary-dot{color:#8d968a;flex:none}.compose-summary-effort{color:#667069;font-size:10px;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums;transition:color .25s}.compose-summary-caret{color:#667069;flex:none;font-size:10px;transition:transform .2s}
+.composer-settings[open] .compose-summary-caret{transform:rotate(180deg)}
+.composer-settings.is-max .compose-summary-effort{color:#70568e}.composer-settings.is-max .compose-summary-effort::before{content:'✦ ';color:#70568e;font-size:9px;vertical-align:.5px}
+
+/* 弹出面板：柔和表面、留白更大、分隔线更轻 */
+.composer-settings-panel{position:absolute;bottom:calc(100% + 11px);left:0;width:318px;max-width:calc(100vw - 48px);max-height:min(62dvh,520px);overflow:auto;overscroll-behavior:contain;padding:14px;background:#fff;border:1px solid #e4e9de;border-radius:16px;box-shadow:0 18px 48px -12px #1d2c1f2b,0 2px 6px #1d2c1f0d;z-index:45;color:#4c5b46;animation:composer-panel-in .18s cubic-bezier(.22,1,.36,1)}
+@keyframes composer-panel-in{from{opacity:0;transform:translateY(5px) scale(.99)}to{opacity:1;transform:none}}
+.composer-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:600;letter-spacing:.01em;color:#5c6b58;margin:0 0 10px;padding:0 2px}
+.composer-panel-heading .composer-panel-close{display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:7px;background:transparent;color:#6b7570;font:inherit;font-size:17px;line-height:1;cursor:pointer;transition:background .16s,color .16s}
+.composer-panel-close:hover{background:#f2f5ed;color:#52684b}
+.composer-config,.model-bar.composer-config{display:flex;flex-direction:column;align-items:stretch;gap:9px;width:100%;margin:0;padding:0 0 12px;border:0;border-bottom:1px solid #eff2ea;min-width:0}
+.composer-config .model-select-wrap{position:relative;min-width:0;width:100%;max-width:none}
+.composer-config .model-select{display:flex;align-items:center;justify-content:flex-start;gap:9px;width:100%;height:46px;min-width:0;padding:8px 9px;border:1px solid #e6ebe0;border-radius:11px;background:#fafcf7;color:#38493d;font:inherit;text-align:left;cursor:pointer;transition:background .16s,border-color .16s}
+.composer-config .model-select:hover,.composer-config .model-select[aria-expanded=true]{background:#f3f7ec;border-color:#d7e1cb}.composer-config .model-select:disabled{opacity:.5;cursor:default}
+.model-glyph{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.25;stroke-linecap:round;flex:none;color:#728a70}
+.model-select-copy{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}.model-select-names{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#334234;font-size:12.5px;font-weight:550;line-height:1.2}
+.model-select-source{display:block;font-size:9.5px;letter-spacing:.01em;color:#667069;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.composer-config .caret{margin-left:auto;color:#667069;font-size:12px;flex:none}
+
+.composer-config .reasoning-slider{flex:none;width:100%;max-width:none;min-width:0}
+.composer-settings-panel .composer-options,.composer-settings-panel .model-generation-controls{display:flex;flex-direction:column;align-items:stretch;gap:2px;width:100%;margin:8px 0 0}
+
+/* 选项行：标签在左，开关在右（Claude 式设置列表） */
+.composer-settings-panel .chat-toggle,.composer-settings-panel .thinking-toggle{display:flex;align-items:center;justify-content:flex-start;gap:9px;width:100%;height:auto;min-height:36px;padding:7px 8px;border:0;border-radius:9px;background:transparent;color:#667069;text-align:left;white-space:nowrap;font:inherit;font-size:11px;line-height:1.5;cursor:pointer;transition:background .15s,color .15s}
+.composer-settings-panel .chat-toggle .switch-track,.composer-settings-panel .thinking-toggle .switch-track{order:2;margin-left:auto}
+.composer-settings-panel .chat-toggle.on,.composer-settings-panel .thinking-toggle.on{color:#3f6049}
+.composer-settings-panel .chat-toggle:hover:not(:disabled),.composer-settings-panel .thinking-toggle:hover:not(:disabled){background:#f5f7f1;color:#5b6b54}
+.composer-settings-panel .switch-track{display:block;flex:none;width:31px;height:18px;padding:2px;border-radius:999px;background:#e2e6df;transition:background .2s}.composer-settings-panel .switch-track::after{width:14px;height:14px;transition:transform .2s,box-shadow .2s}
+.composer-settings-panel .on .switch-track{background:#6b8a62;box-shadow:inset 0 0 0 1px #5f7f570f}.composer-settings-panel .on .switch-track::after{transform:translateX(13px);box-shadow:0 1px 2px #0002}
+.composer-settings-panel .reasoning-detect-button{display:flex;align-items:center;justify-content:space-between;width:100%;height:34px;margin:6px 0 0;padding:6px 10px;border:1px solid #eaeee4;border-radius:9px;background:#fbfcf9;color:#667069;font-size:11px;line-height:18px;text-align:left;white-space:nowrap;cursor:pointer;transition:background .16s,border-color .16s,color .16s}
+.composer-settings-panel .reasoning-detect-button::after{content:'›';font-size:13px;color:#6b7570;margin-left:auto;padding-left:8px}
+.composer-settings-panel .reasoning-detect-button:hover:not(:disabled){background:#f4f7ef;border-color:#dfe6d6;color:#52684b}
+.composer-settings-panel .chat-model-settings{margin:2px 0 0;padding:7px 10px;font-size:10.5px;color:#667069;white-space:nowrap;text-decoration:none;transition:color .16s}
+.composer-settings-panel .chat-model-settings:hover{color:#54705a}
+.composer-settings-panel .vision-menu{margin:2px 0 0}.composer-settings-panel .vision-menu>summary{padding:8px 8px;font-size:11px}
+.composer-settings-panel .vision-popover{position:static;width:100%;max-height:none;border:0;border-radius:0;padding:4px;box-shadow:none;font-size:11px}
+.model-select:focus-visible,.model-option:focus-visible,.composer-settings>summary:focus-visible,.composer-panel-close:focus-visible{outline:2px solid #8da182;outline-offset:2px}
+.model-dropdown{position:absolute;bottom:calc(100% + 12px);left:0;right:auto;display:flex;flex-direction:column;width:320px;max-width:calc(100vw - 48px);max-height:min(430px,55vh);overflow:hidden;padding:6px;background:#fff;border:1px solid #dfe6d9;border-radius:15px;box-shadow:0 14px 48px #20311f21;z-index:45;color:#3b4939;font-size:12px}.model-dropdown[hidden]{display:none}.model-menu-heading{display:flex;align-items:center;justify-content:space-between;padding:9px 9px 5px;font-size:11px;font-weight:600;color:#687861}.model-menu-heading>span{font-size:9px;font-weight:400;color:#667069}
+.model-search,#modelSearch{flex:none;min-height:34px;margin:6px;padding:8px 10px;border:1px solid #e7ece1;border-radius:8px;background:#f7f9f4;color:#42513e;font:inherit;font-size:11px;outline:none}.model-search:focus,#modelSearch:focus{border-color:#9daf93;box-shadow:0 0 0 2px #72965b0a}.model-groups{overflow:auto;padding:0 2px 3px;min-height:0}.model-group-title{padding:12px 9px 6px;font-size:9px;font-weight:500;letter-spacing:.03em;color:#667069}.model-option{display:flex;align-items:center;gap:10px;width:100%;min-height:43px;padding:9px;border:0;border-radius:9px;background:transparent;color:#40513b;text-align:left;font:inherit;font-size:12px;cursor:pointer}.model-option:hover{background:#f4f7ef}.model-option.active{background:#eef3e7}.model-option-copy{display:flex;flex:1;flex-direction:column;gap:4px;min-width:0}.model-option-name{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}.model-option-id{display:block;font-size:9px;line-height:1.2;color:#667069;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.model-check{flex:none;width:16px;color:#668252;font-weight:600;font-size:13px}.model-empty{padding:22px 12px;color:#667069;text-align:center;font-size:11px}.model-default-badge{flex:none;padding:2px 5px;border-radius:4px;font-size:8px;color:#567048;background:#f4f7ee;border:1px solid #e3ead8}
+
+/* Nested model lists expand inside the settings panel instead of covering it. */
+.composer-settings-panel .model-dropdown{position:static;width:100%;max-width:none;max-height:none;margin:6px 0 0;padding:0;border:1px solid #e6ecdf;border-radius:9px;box-shadow:none;z-index:auto}
+.composer-settings-panel .model-menu-heading{display:none}.composer-settings-panel .model-groups{max-height:175px;overflow:auto}.composer-settings-panel .model-option{min-height:38px;padding:7px}
+@media(max-width:760px){.input-bar{padding:7px 12px 12px}.composer-wrap{padding-top:7px}.composer-settings{flex:0 1 230px}.compose-summary-model{font-size:10.5px}.compose-summary-effort{font-size:9.5px}.composer-settings>summary{gap:4px;padding:0 6px}.composer-settings-panel{left:0;right:auto;max-width:calc(100vw - 40px);width:300px;max-height:62dvh;padding:13px}.chat-topbar .back-link[href="/"]{display:none}}
+@media(prefers-reduced-motion:reduce){.composer-settings-panel{animation:none}}
+
+/* Reference menu: one model row, one effort row; extras stay collapsed. */
+.composer-settings{flex:0 1 auto}.compose-summary-dot{display:none}.compose-summary-effort{font-size:11px;font-weight:500}.composer-settings.is-max .compose-summary-effort::before{content:none}
+.composer-settings-panel{width:300px;padding:5px;border-radius:14px;max-height:min(62dvh,500px);color:#383a42;box-shadow:0 10px 32px #20202b1f}
+.composer-config,.model-bar.composer-config{gap:2px;padding:0;border:0}
+.composer-config .model-select{height:35px;padding:7px 9px;gap:7px;border:0;border-radius:8px;background:transparent;color:#4d5a4f}
+.composer-config .model-select:hover,.composer-config .model-select[aria-expanded=true]{background:#f3f4f7;border-color:transparent}
+.composer-config .model-select::before{content:'模型';margin-right:auto;color:#44464d;font-size:12px;flex:none}
+.composer-config .model-glyph,.composer-config .model-select-source{display:none}
+.composer-config .model-select-copy{flex:0 1 auto;max-width:210px;text-align:right}.composer-config .model-select-names{font-size:12px;font-weight:400;color:#667069;line-height:1.4}.composer-config .caret{margin-left:0;color:#a3a6ae}
+.composer-extra{margin-top:3px;border-top:1px solid #efeff2;font-size:11px}.composer-extra>summary{display:flex;align-items:center;justify-content:space-between;min-height:29px;padding:6px 9px;color:#667069;list-style:none;cursor:pointer}.composer-extra>summary::-webkit-details-marker{display:none}.composer-extra>summary:hover{background:#f7f7f9;border-radius:7px}.composer-extra>summary span{font-size:10px}.composer-extra[open]>summary span{transform:rotate(180deg)}
+.composer-settings-panel .composer-options,.composer-settings-panel .model-generation-controls{margin:0;padding:4px 5px}
+.composer-settings-panel .model-dropdown{margin:2px 5px 5px;width:calc(100% - 10px);border-color:#ededf1}.composer-settings-panel .model-groups{max-height:175px}
+@media(max-width:760px){.composer-settings-panel{width:290px;padding:5px}.composer-settings{flex:0 1 auto}.compose-summary-effort{font-size:10px}.composer-config .model-select-copy{max-width:190px}}
+
+/* 触控命中区：仅把可点区域补足到 32px，不改变所在行的视觉高度与布局 */
+.document-bar #saveStatus { min-height: 32px; }
+.document-bar .ai-pane-toggle { min-height: 32px; }
+.edit-tools .preset-menu > summary, .edit-tools #modifySelectionBtn { min-height: 32px; }
+.composer-settings > summary { height: 32px; min-height: 32px; }
+.compose-footer .attach-image-btn, .compose-footer .send-btn { width: 32px; height: 32px; }
+.composer-bottom #attachDocumentBtn, .composer-bottom #attachImageBtn { width: 32px; height: 32px; }
+/* 图标按钮：32px 命中区用负 margin 抵消占位，视觉位置与行高不变 */
+.rs-head .rs-boost { width: 34px; height: 34px; margin: -5px; }
+.composer-settings-panel .composer-extra > summary { min-height: 33px; }
+
+.composer-settings-panel .chat-model-settings { min-height: 32px; display: flex; align-items: center; }

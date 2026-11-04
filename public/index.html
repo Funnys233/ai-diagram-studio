@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagram Studio · 绘图工作台</title>
+<script>
+// 共享模块与模型接口由 Node 服务提供，不能作为本地静态文件运行。
+if (window.location.protocol === 'file:') {
+  window.location.replace('http://127.0.0.1:8080/');
+}
+</script>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="image-viewer.css">
+<link rel="stylesheet" href="chatgpt-local.css">
+<link rel="stylesheet" href="reasoning-slider.css">
+<link rel="stylesheet" href="composer-controls.css">
+<link rel="stylesheet" href="quota-meter.css">
+<link rel="stylesheet" href="account-menu.css">
+<link rel="stylesheet" href="topbar-toggle.css">
+<script src="topbar-toggle.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">
+      <svg viewBox="0 0 28 28" width="28" height="28" fill="none" aria-hidden="true">
+        <rect x="3" y="3" width="9" height="9" rx="2" fill="currentColor"/>
+        <rect x="16" y="16" width="9" height="9" rx="2" stroke="currentColor" stroke-width="2"/>
+        <path d="M16 7.5h4.5v4.5M7.5 16v4.5H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <h1>Diagram <span class="brand-studio">Studio</span></h1>
+      <span>绘图工作台</span>
+    </div>
+  </div>
+  <nav class="topbar-right" id="workspaceNav" aria-label="工作台功能">
+    <a class="nav-trigger chat-nav-link" href="/chat.html" title="打开纯对话页面" aria-label="纯对话"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v9a2.5 2.5 0 0 1-2.5 2.5H11l-5 4v-4.2a2.5 2.5 0 0 1-2-2.3Z"/><path d="M8 8h8M8 12h5"/></svg><span>对话</span></a>
+    <a class="nav-trigger chat-nav-link" href="/requirements.html" title="需求文档成图" aria-label="需求文档成图"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10l4 4v14H5Z"/><path d="M14 3v5h5M8 12h8M8 16h5"/></svg><span>文档成图</span></a>
+    <details class="nav-menu" id="fileMenu">
+      <summary class="nav-trigger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3Z"/></svg><span>文件</span></summary>
+      <div class="nav-popover">
+        <div class="nav-panel-title">图表文件</div>
+        <button type="button" class="nav-action" id="newDiagramBtn"><span>新建图表</span><small>从空白画布开始</small></button>
+        <button type="button" class="nav-action" id="importDiagramBtn"><span>打开图表</span><small>导入 .drawio 或 XML 文件</small></button>
+      </div>
+    </details>
+    <details class="nav-menu" id="historyMenu">
+      <summary class="nav-trigger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.6 7M3 5v6h6M12 7v5l3 2"/></svg><span>历史</span></summary>
+      <div class="nav-popover">
+        <div class="nav-panel-title">会话与修改</div>
+        <button type="button" class="nav-action" id="recoverSessionBtn"><span>恢复会话</span><small>重新打开浏览器中的已存会话</small></button>
+        <button type="button" class="nav-action" id="undoBtn" title="恢复到上一次 AI 修改前的画布（含手工编辑）"><span>撤销 AI 修改</span><small>回到上一次 AI 修改前</small></button>
+      </div>
+    </details>
+    <details class="nav-menu" id="exportMenu">
+      <summary class="nav-trigger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5"/></svg><span>导出</span></summary>
+      <div class="nav-popover">
+        <div class="nav-panel-title">保存到电脑</div>
+        <button type="button" class="nav-action" id="exportPngBtn"><span>导出 PNG</span><small>保存为图片，方便分享</small></button>
+        <button type="button" class="nav-action" id="downloadBtn"><span>下载图表</span><small>保存可继续编辑的 .drawio 文件</small></button>
+      </div>
+    </details>
+    <button type="button" class="nav-trigger" id="modelSettingsBtn" title="模型设置：管理模型提供商与 API 配置" aria-label="模型设置"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M9 1v4m6-4v4M9 19v4m6-4v4M1 9h4m-4 6h4m14-6h4m-4 6h4M9 9h6v6H9Z"/></svg><span>模型</span></button>
+  </nav>
+  <input type="file" id="diagramFileInput" accept=".drawio,.xml" aria-label="打开图表文件" hidden>
+</header>
+
+<main class="workspace" id="workspace">
+  <section class="editor-pane">
+    <div class="document-bar">
+      <div class="document-info"><span id="sessionName">未命名图表</span><button type="button" id="saveStatus" class="save-status" aria-live="polite">正在读取本地会话…</button></div>
+      <div class="document-status"><div class="status-pill" id="aiStatus" role="status" aria-live="polite"><span class="dot"></span><span id="aiStatusText">连接中…</span></div><div class="status-pill muted" id="canvasStatus" title="画布版本号，每次手工修改 +1"><span id="canvasStatusText">画布 v0</span></div></div>
+    </div>
+    <section class="banner info requirements-handoff hidden" id="requirementsHandoffBanner" aria-label="打开需求图表">
+      <div id="requirementsHandoffText"></div>
+      <div class="banner-actions"><button type="button" class="banner-btn primary" id="requirementsHandoffOpenBtn" disabled>打开并继续编辑</button><button type="button" class="banner-btn" id="requirementsHandoffDismissBtn">暂不打开</button><a class="banner-btn" href="/requirements.html">返回文档成图</a></div>
+    </section>
+    <div class="editor-frame-wrap">
+      <div class="editor-loading" id="editorLoading">
+        <div class="spinner"></div>
+        <p>正在加载 draw.io 编辑器…</p>
+      </div>
+      <iframe id="drawioFrame" title="draw.io 编辑器" allow="clipboard-read; clipboard-write"></iframe>
+    </div>
+  </section>
+
+  <aside class="agent-pane" id="aiPane" aria-label="AI 绘图助手">
+    <div class="banner hidden" id="conflictBanner">
+      <div class="banner-text" id="pendingResultText">
+        生成期间画布上出现了新的手工编辑，AI 结果<b>没有</b>覆盖你的画布，已暂存等你决定。
+      </div>
+      <div class="banner-actions">
+        <button class="banner-btn primary" id="applyPendingBtn">应用 AI 结果（会覆盖当前画布）</button>
+        <button class="banner-btn" id="discardPendingBtn">丢弃 AI 结果</button>
+      </div>
+    </div>
+
+    <div class="chat-list" id="chatList">
+      <div class="msg assistant">
+        <div class="welcome">
+          <span class="welcome-kicker">把想法画清楚</span>
+          <h3>从一个想法开始。</h3>
+          <p>描述流程、系统或结构。<br>生成完整图表，随时调整细节。</p>
+          <div class="welcome-footnote"><span></span>生成的图形可在画布中继续编辑</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="edit-tools">
+      <details class="preset-menu" id="chips">
+        <summary title="选择图表的配色与外观">绘图风格 <span aria-hidden="true">▾</span></summary>
+        <div class="preset-options">
+          <button type="button" class="chip" data-style="monochrome" data-prompt="【绘图风格：黑白简约】使用白色画布、白色节点填充、深灰或黑色边框与文字、清晰的黑色连线；统一细边框、简洁直角，无渐变、无阴影，不用彩色，适合黑白打印。已有图表只调整外观，保留节点文字、连接关系和布局；新图按我的内容需求绘制。"><span class="preset-swatch preset-swatch-mono" aria-hidden="true"></span><span><strong>黑白简约</strong><small>白底黑线 · 清爽易读</small></span></button>
+          <button type="button" class="chip" data-style="business" data-prompt="【绘图风格：商务蓝】使用白色画布、浅蓝色节点填充（#EFF6FF）、蓝色边框与连线（#2563EB）、深蓝文字（#1E3A8A）；关键节点可用深蓝底白字，圆角克制，层级清晰，无渐变和重阴影。已有图表只调整外观，保留节点文字、连接关系和布局；新图按我的内容需求绘制。"><span class="preset-swatch preset-swatch-blue" aria-hidden="true"></span><span><strong>商务蓝</strong><small>蓝色层级 · 适合汇报</small></span></button>
+          <button type="button" class="chip" data-style="pastel" data-prompt="【绘图风格：柔和配色】使用白色画布，以低饱和浅绿（#ECFDF5）、浅紫（#F5F3FF）、浅橙（#FFF7ED）区分模块，同类节点保持同色，文字用深灰（#1F2937）；使用柔和圆角与细线，避免高饱和颜色、渐变和重阴影。已有图表只调整外观，保留节点文字、连接关系和布局；新图按我的内容需求绘制。"><span class="preset-swatch preset-swatch-pastel" aria-hidden="true"></span><span><strong>柔和配色</strong><small>低饱和色 · 模块分明</small></span></button>
+          <button type="button" class="chip" data-style="paper" data-prompt="【绘图风格：论文插图】使用纯白背景、黑色文字和细线边框；模块用白色或极浅灰填充，分组边界用细虚线，统一字号与箭头样式，层级用边框和明暗区分，不依赖颜色表达语义；不使用阴影、渐变或装饰，便于论文排版和打印。已有图表只调整外观，保留节点文字、连接关系和布局；新图按我的内容需求绘制。"><span class="preset-swatch preset-swatch-paper" aria-hidden="true"></span><span><strong>论文插图</strong><small>细线分组 · 便于打印</small></span></button>
+          <button type="button" class="chip" data-style="dark" data-prompt="【绘图风格：深色科技】使用深蓝灰画布（#0F172A）、深色节点填充（#1E293B）、浅色文字（#F8FAFC），以青蓝色边框和箭头（#38BDF8）突出结构；保持文字对比度，圆角适中，避免发光、渐变和多余装饰。已有图表只调整外观，保留节点文字、连接关系和布局；新图按我的内容需求绘制。"><span class="preset-swatch preset-swatch-dark" aria-hidden="true"></span><span><strong>深色科技</strong><small>深色底 · 青蓝点缀</small></span></button>
+          <button type="button" class="chip" data-style="sketch" data-prompt="【绘图风格：手绘草图】使用米白画布、白色或浅米色节点、深灰文字和手绘感线条，少量淡黄色标记重点；边框呈轻微不规则的手绘效果，文字必须清晰，箭头方向明确，不使用照片、纹理图片或重阴影。已有图表只调整外观，保留节点文字、连接关系和布局；新图按我的内容需求绘制。"><span class="preset-swatch preset-swatch-sketch" aria-hidden="true"></span><span><strong>手绘草图</strong><small>手绘线条 · 轻松自然</small></span></button>
+          <p class="preset-hint">选择后加入输入框，发送后生效。</p>
+        </div>
+      </details>
+      <button type="button" class="ghost-btn" id="modifySelectionBtn" title="先在画布选中节点或连线，再锁定修改范围">修改选中</button>
+      <span id="editScopeText">当前整页</span>
+      <button type="button" class="ghost-btn hidden" id="clearEditBtn">退出局部</button>
+    </div>
+    <form class="input-bar" id="chatForm">
+      <div class="compose-card">
+        <div id="chatAttachments" class="chat-attachments hidden" aria-label="待发送图片"></div>
+        <div class="chat-compose"><textarea id="chatInput" rows="1" aria-label="描述你的图表需求" placeholder="描述你的图表，或告诉我哪里需要调整…"></textarea></div>
+        <div class="compose-footer">
+          <div class="compose-tools">
+            <input type="file" id="chatImageInput" accept="image/png,image/jpeg" aria-label="添加图片" multiple hidden>
+            <button type="button" id="attachImageBtn" class="attach-image-btn" title="开启多模态后添加图片" aria-label="添加图片" disabled><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 3-3 5 5"/></svg></button>
+            <details class="composer-settings"><summary aria-label="模型与思考设置"><span class="compose-summary-model">选择模型</span><span class="compose-summary-dot" aria-hidden="true">·</span><span class="compose-summary-effort">默认</span><span class="compose-summary-caret" aria-hidden="true">⌄</span></summary><div class="composer-settings-panel"><div class="composer-config model-bar" aria-label="本次对话的模型与强度"><div class="model-select-wrap">
+        <button type="button" class="model-select" id="modelSelectBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="modelDropdown" title="切换本次对话使用的模型">
+          <svg class="model-glyph" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="12" height="12" rx="3"/><path d="M7 1v3m6-3v3M7 16v3m6-3v3M1 7h3m-3 6h3m12-6h3m-3 6h3M8 8h4v4H8Z"/></svg><span class="model-select-copy"><span class="model-select-names" id="modelSelectLabel">加载模型…</span><span class="model-select-source" id="modelSelectSource">选择模型</span></span>
+          <span class="caret">▾</span>
+        </button>
+        <div class="model-dropdown hidden" id="modelDropdown" role="dialog" aria-label="选择模型">
+          <div class="model-menu-heading">选择模型<span>用于下一条消息</span></div>
+          <input type="text" id="modelSearch" aria-label="搜索模型" placeholder="搜索模型名称或 ID…" autocomplete="off">
+          <div class="model-groups" id="modelGroups"></div>
+        </div>
+      </div>        <select class="reasoning-effort" id="reasoningEffortSelect" aria-label="思考强度" disabled><option value="">强度·默认</option></select></div><details class="composer-extra"><summary>更多设置<span aria-hidden="true">⌄</span></summary><div class="model-generation-controls">
+        <button type="button" class="thinking-toggle" id="thinkingToggle" role="switch" aria-checked="false" aria-label="模型思考模式" disabled><span class="switch-track" aria-hidden="true"></span><span id="thinkingToggleLabel">思考</span></button>
+        <button type="button" class="thinking-toggle" id="multimodalToggle" role="switch" aria-checked="false" aria-label="多模态" title="开启后，每次发送附上当前画面，结合对话上下文识图和修改" disabled><span class="switch-track" aria-hidden="true"></span><span>多模态</span></button>
+        <details class="vision-menu" id="visionPanel">
+          <summary id="visionSummary" title="多模态补充要求与参考图片">参考与补充</summary>
+          <div class="vision-popover">
+            <p id="visionStatus" class="check-note" aria-live="polite"></p>
+            <div class="vision-options" id="visionOptions">
+              <div class="vision-tools"><label class="ghost-btn">参考图片<input type="file" id="visionReferenceInput" accept="image/png,image/jpeg" hidden></label><span id="visionReferenceName">未添加</span><button type="button" class="ghost-btn hidden" id="clearVisionReferenceBtn">移除</button></div>
+              <textarea id="visionPrompt" rows="2" aria-label="多模态补充要求" maxlength="3800" placeholder="可选：对话的补充要求，或参考图的配色、布局方向…"></textarea>
+            </div>
+            <details class="vision-options" id="visionPreviewPanel"><summary>截图与参考图预览</summary>
+              <div class="vision-previews"><img id="visionScreenshot" alt="本次对话的当前页截图" class="hidden"><img id="visionReferencePreview" alt="参考图片" title="参考图片" class="hidden"></div>
+            </details>
+          </div>
+        </details>
+      </div></details></div></details>
+          </div>
+          <button type="button" id="cancelBtn" class="cancel-btn hidden" title="取消本次生成">取消</button>
+          <button type="submit" id="sendBtn" class="send-btn" title="发送" aria-label="发送"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M11 20V7.83l-5.59 5.58L4 12l8-8 8 8-1.41 1.41L13 7.83V20z"/></svg></button>
+        </div>
+      </div>
+    </form>
+    <div class="hint hidden" id="hintBar" role="status" aria-live="polite"></div>
+  </aside>
+</main>
+
+<div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+<div class="session-overlay hidden" id="recoveryDialog" role="dialog" aria-modal="true" aria-labelledby="recoveryTitle">
+  <div class="session-dialog">
+    <h3 id="recoveryTitle">恢复会话</h3>
+    <p>重新打开已保存的图表、聊天和撤销记录。打开前会确认替换当前内容。</p>
+    <button type="button" class="banner-btn primary" id="recoverCurrentBtn">恢复已保存的当前会话</button>
+    <button type="button" class="banner-btn" id="recoverPreviousBtn">恢复新建／导入前的上一份备份</button>
+    <button type="button" class="ghost-btn" id="closeRecoveryBtn">取消</button>
+    <p class="session-footnote">备份仅保存在此浏览器和当前地址。清除网站数据会删除备份，请另行下载重要图表。</p>
+  </div>
+</div>
+
+<!-- 模型设置抽屉：左侧提供商列表 + 右侧提供商表单与模型管理 -->
+<div class="drawer-overlay hidden" id="drawerOverlay">
+  <div class="drawer" role="dialog" aria-label="模型设置">
+    <div class="drawer-head">
+      <h3>模型设置</h3>
+      <div class="drawer-head-actions">
+        <button type="button" class="ghost-btn small" id="addTemplateBtn">＋ 添加提供商</button>
+        <button type="button" class="drawer-close" id="drawerCloseBtn" title="关闭">✕</button>
+      </div>
+    </div>
+    <div data-chatgpt-mount class="chatgpt-drawer-mount" hidden></div>
+    <div id="cloudScopeBar" class="cloud-scope-bar hidden"><label>配置来源 <select id="cloudApiScope"><option value="personal">我的 API</option><option value="platform">平台 API（管理员）</option></select></label><span id="cloudScopeNote">个人配置仅本人可用。</span></div>
+    <div class="drawer-body">
+      <div class="provider-list" id="providerList"></div>
+      <div class="provider-detail" id="providerDetail">
+        <div class="empty-detail" id="providerEmpty">从左侧选择一个提供商，或点击「＋ 添加提供商」。</div>
+        <form class="provider-form hidden" id="providerForm" novalidate>
+          <div class="stale-banner hidden" id="staleBanner">
+            <div class="stale-banner-text">
+              <b>编辑冲突：</b>配置已在其他窗口被修改，本次保存<b>未生效</b>、没有覆盖新配置。
+              请核对差异后重新编辑，或点击按钮载入最新配置（会重填表单）。
+            </div>
+            <div class="banner-actions">
+              <button type="button" class="banner-btn primary" id="reloadConfigBtn">重新加载最新配置</button>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label class="field">
+              <span class="field-label">Provider ID <em>（创建后不可修改）</em></span>
+              <input type="text" id="pfProviderId" placeholder="如 my-gateway" autocomplete="off">
+              <span class="field-error" id="errProviderId"></span>
+            </label>
+            <label class="field">
+              <span class="field-label">显示名称</span>
+              <input type="text" id="pfName" placeholder="如 我的中转站" autocomplete="off">
+              <span class="field-error" id="errName"></span>
+            </label>
+            <label class="field span2">
+              <span class="field-label">API 基础地址</span>
+              <input type="text" id="pfBaseUrl" placeholder="https://api.example.com/v1" autocomplete="off">
+              <span class="field-error" id="errBaseUrl"></span>
+            </label>
+            <label class="field">
+              <span class="field-label">API 协议</span>
+              <select id="pfProtocol">
+                <option value="openai-chat-completions">OpenAI Chat Completions</option>
+                <option value="anthropic-messages">Anthropic Messages</option>
+              </select>
+              <span class="field-error" id="errProtocol"></span>
+            </label>
+            <label class="field">
+              <span class="field-label">API 密钥 <em id="keyHint">（留空表示保留原密钥）</em></span>
+              <input type="password" id="pfApiKey" placeholder="" autocomplete="new-password">
+              <span class="field-error" id="errApiKey"></span>
+            </label>
+            <div class="field span2 auth-row">
+              <label class="switch"><input type="checkbox" id="pfEnabled"><span>启用该提供商</span></label>
+              <span class="auth-kind" id="authKindBadge"></span>
+              <button type="button" class="banner-btn subtle hidden" id="clearKeyBtn">清除密钥</button>
+            </div>
+          </div>
+
+          <div class="model-manage">
+            <div class="model-manage-head">
+              <h4>模型列表</h4>
+              <button type="button" class="banner-btn" id="fetchModelsBtn">获取模型列表</button>
+            </div>
+            <div class="fetch-result hidden" id="fetchResult"></div>
+            <div class="provider-models" id="providerModels"></div>
+            <div class="add-model-row">
+              <input type="text" id="nmModelId" aria-label="真实模型 ID" placeholder="真实模型 ID（区分大小写）" autocomplete="off">
+              <input type="text" id="nmDisplayName" aria-label="模型显示名称" placeholder="显示名称（可选）" autocomplete="off">
+              <input type="number" id="nmMaxTokens" aria-label="模型输出上限" placeholder="输出上限（建议 32768）" min="1" max="200000">
+              <input type="number" id="nmTemperature" aria-label="模型 temperature" placeholder="temperature(可选)" min="0" max="2" step="0.1">
+              <select id="nmThinkingMode" aria-label="新模型思考模式">
+                <option value="default">思考：供应商默认</option>
+                <option value="deepseek-off">关闭思考（DeepSeek 参数）</option>
+                <option value="deepseek-on">开启思考（DeepSeek 参数）</option>
+                <option value="enable-thinking-off">关闭思考（魔搭 / Qwen 参数）</option>
+                <option value="enable-thinking-on">开启思考（魔搭 / Qwen 参数）</option>
+              </select>
+              <button type="button" class="banner-btn" id="addModelBtn">添加模型</button>
+            </div>
+            <div class="field-error" id="errModel"></div>
+            <div class="form-note">添加后点击模型的「编辑」，可查看自动识别的思考能力或手动配置接口支持的强度。</div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="banner-btn primary" id="saveProviderBtn">保存提供商</button>
+            <button type="button" class="banner-btn hidden" id="deleteProviderBtn">删除提供商</button>
+          </div>
+          <div class="form-note">配置保存后立即生效并持久化（在途请求仍用原配置完成）；密钥只保存在服务端，不会出现在任何响应与日志中。</div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 添加提供商：模板 / 自定义 -->
+<div class="tpl-overlay hidden" id="tplOverlay">
+  <div class="tpl-dialog" role="dialog" aria-label="添加提供商">
+    <div class="drawer-head">
+      <h3>添加提供商</h3>
+      <button type="button" class="drawer-close" id="tplCloseBtn" title="关闭">✕</button>
+    </div>
+    <div class="tpl-section-title">常用提供商模板 <em>（仅预填可修改的初值，不限制网关地址与模型）</em></div>
+    <div class="tpl-grid" id="templateGrid"></div>
+    <div class="tpl-section-title">或</div>
+    <button type="button" class="banner-btn primary tpl-custom" id="customProviderBtn">自定义模型 API</button>
+  </div>
+</div>
+
+<script src="chatgpt-local.js"></script>
+<script src="navigation.js"></script>
+<script src="quota-meter.js"></script>
+<script src="membership.js"></script>
+<script src="account-menu.js"></script>
+<script src="cloud.js"></script>
+<script src="/shared/sse.js"></script>
+<script src="/shared/xml.js"></script>
+<script src="/shared/graphmodel.js"></script>
+<script src="/shared/drawio-format.js"></script>
+<script src="/shared/diagram-edit.js"></script>
+<script src="/shared/vision-check.js"></script>
+<script src="/shared/vision-repair.js"></script>
+<script src="/shared/model-capabilities.js"></script>
+<script src="turn-usage.js"></script>
+<script src="session-store.js"></script>
+<script src="drawing-tasks.js"></script>
+<script src="image-viewer.js"></script>
+<script src="reasoning-slider.js"></script>
+<script src="composer-controls.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

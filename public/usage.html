@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6f3">
+  <title>用量 · Diagram Studio</title>
+  <link rel="stylesheet" href="usage.css">
+  <link rel="stylesheet" href="quota-meter.css">
+  <script src="quota-meter.js" defer></script>
+  <script src="usage.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="/">◈ <strong>Diagram Studio</strong><span>用量</span></a><nav aria-label="返回工作台"><a href="/chat.html">纯对话</a><a href="/">绘图工作台</a><span id="accountName"></span></nav></header>
+  <main>
+    <div class="page-heading"><div><p class="eyebrow">USAGE</p><h1>每一次调用，都有记录</h1><p class="subtitle">分别查看平台模型、个人 API 和 ChatGPT 订阅的使用情况。</p></div><button id="refreshBtn" type="button">刷新用量</button></div>
+    <section class="quota-note" id="quotaNote" aria-label="当前限额">正在读取当前额度…</section>
+    <form id="filters" class="filters">
+      <label>时间范围<select id="range"><option value="today">今日</option><option value="7d">近 7 天</option><option value="30d">近 30 天</option></select></label>
+      <label id="scopeField" hidden>统计范围<select id="scope"><option value="all">全站用量</option><option value="mine">我的用量</option><option value="subscription">我的订阅 · 所有授权用户</option></select></label>
+      <label id="userField" hidden>使用者<select id="userId"><option value="">全部用户</option></select></label>
+      <label>调用来源<select id="source"><option value="">全部来源</option><option value="platform">平台模型</option><option value="personal">个人 API</option><option value="chatgpt">ChatGPT 订阅</option></select></label>
+      <label class="model-filter">模型<select id="modelId"><option value="">全部模型</option></select></label>
+    </form>
+    <p id="status" role="status" aria-live="polite">正在加载用量…</p>
+    <div id="report" hidden>
+      <section id="cards" class="cards" aria-label="用量概览"></section>
+      <div class="panel-grid">
+        <section class="panel"><div class="panel-heading"><h2>调用来源</h2><span>每次请求只计入一种来源</span></div><div id="sources"></div></section>
+        <section class="panel"><div class="panel-heading"><h2>每日调用</h2><span>按 UTC 日期统计 · 北京时间 08:00 分日</span></div><div id="daily" class="daily"></div></section>
+      </div>
+      <div class="panel-grid">
+        <section class="panel"><div class="panel-heading"><h2>按使用者</h2></div><div id="users"></div></section>
+        <section class="panel"><div class="panel-heading"><h2>按模型</h2></div><div id="models"></div></section>
+      </div>
+      <section class="panel"><div class="panel-heading"><h2>调用明细</h2><span id="detailCount"></span></div><div class="table-wrap"><table><thead><tr><th>北京时间</th><th>使用者</th><th>来源 / 模型</th><th>结果</th><th>输入 token</th><th>输出 token</th><th>缓存命中</th><th>额度消耗</th><th>耗时</th></tr></thead><tbody id="events"></tbody></table></div><div class="pagination"><button id="previousBtn" type="button">上一页</button><span id="pageLabel"></span><button id="nextBtn" type="button">下一页</button></div></section>
+      <footer class="notes"><p id="coverage"></p><p>调用明细保留 30 天，每日汇总保留 90 天。结果按上游请求统计；实际发起后失败或取消仍计次数，自动纠错与重试分别计数。缓存命中率按返回缓存数据的调用计算，部分记录缺失时会标注；“未提供”不代表零命中。缓存仅统计，暂不调整扣点。未知 token 不按零计算，统计不保存提问、文档正文或密钥。</p><p>三个免费模型按全站日次数计算；个人 API 只统计。周点数＝基础点数×模型倍率：基础点数为（输入 token＋5×输出 token）÷1000，最低 0.1 点；共享 GPT 的 Luna 为 1 倍、Sol 为 30 倍、Astra 为 300 倍；中转（含 Luna 专用）按共享基准的一半，分别为 0.5、15、150 倍，Grok 4.6、4.7 和 Claude Sonnet 5.5、Opus、Fable 5.1 的实际倍率分别为 20、25、30、80、150 倍，不再减半；其余开放中转模型默认 0.5 倍。同样输入、输出各 1000 token，共享 GPT 分别扣 6、180、1800 点，中转分别扣 3、90、900 点；结算精度为 0.001 点，不足一位向上取整。输出中的思考用量不重复扣；用量未知时按关闭/低 1、中/默认 2、高 3、极高 5、最高 8 点估算，再乘模型倍率，预留额度同样计算。历史已扣点数保持不变。本站额度与 ChatGPT 官方额度分别计算。<a href="https://chatgpt.com/#settings/Usage" target="_blank" rel="noopener noreferrer">查看 ChatGPT 官方用量 ↗</a></p></footer>
+    </div>
+  </main>
+</body>
+</html>

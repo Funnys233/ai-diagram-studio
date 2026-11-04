@@ -1,0 +1,15 @@
+html.topbar-toggle-ready :is(.topbar, .chat-topbar) { padding-right: 58px; }
+.topbar-toggle { position: fixed; top: 10px; right: 12px; z-index: 45; display: grid; place-items: center; width: 30px; height: 28px; padding: 0; border: 1px solid #dfe5de; border-radius: 7px; background: #fff; color: #617367; cursor: pointer; }
+.topbar-toggle:hover { background: #f0f4ee; color: #426451; }
+.topbar-toggle:focus-visible { outline: 2px solid #8da182; outline-offset: 2px; }
+html:has(.topbar .cloud-account[open], .chat-topbar .cloud-account[open]) .topbar-toggle { z-index: 85; }
+.topbar-toggle svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+html.topbar-collapsed :is(.topbar, .chat-topbar, #aiPane) { display: none; }
+.topbar-toggle .focus-leave, .topbar-collapsed .topbar-toggle .focus-enter { display: none; }
+.topbar-collapsed .topbar-toggle .focus-leave { display: block; }
+.topbar-collapsed .chat-layout { height: 100%; }
+.topbar-collapsed .document-bar { padding-right: 38px; }
+@media (max-width: 760px) {
+  .topbar-collapsed .history-rail { top: 0; }
+  .topbar-collapsed body.history-open .mobile-scrim { top: 0; }
+}

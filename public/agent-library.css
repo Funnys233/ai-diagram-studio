@@ -1,0 +1,40 @@
+.library-button{margin-top:9px;padding:9px 12px;border:0;background:transparent;border-radius:8px;color:#73866c;font-size:12px;text-align:left}
+.library-button:hover{background:#e7eee1}
+.history-controls{display:grid;gap:10px;margin:0 4px 12px}
+.history-controls input,.library-filters input,.library-filters select,.rename-form input{font:inherit;min-width:0;border:1px solid #dce4d6;background:#fff;color:#425b3c;border-radius:8px;padding:9px 11px;font-size:12px;outline:0}
+.history-controls input:focus,.library-filters input:focus,.library-filters select:focus,.rename-form input:focus{border-color:#90aa83;box-shadow:0 0 0 2px #9ab89118}
+.history-controls input::placeholder,.library-filters input::placeholder{color:#99a38f}
+.history-tabs{display:flex;gap:5px}
+.history-tabs button{border:0;border-radius:6px;background:transparent;color:#87967d;padding:5px 9px;font-size:11px}
+.history-tabs button[aria-pressed=true]{background:#e2ebda;color:#5b754e}
+.history-more{align-self:center;border:0;background:transparent;color:#7c906f;font-size:11px;padding:10px 12px;border-radius:7px}
+.history-more:hover{background:#e8eee2}
+.history-more:disabled{opacity:.5}
+.history-notice{font-size:11px;color:#9b8b6f;line-height:1.7;margin:8px}
+.capacity-note{font-size:10px;color:#9aa58f;margin:5px 0 0;line-height:1.6}
+.task-state[data-state=queued]{color:#7d815c;background:#f0f0df}
+.rename-form{display:flex;gap:7px;align-items:center;margin:0 0 20px}
+.rename-form input{flex:1}
+.rename-form .secondary-button,.rename-form .text-button{white-space:nowrap}
+.files-dialog{width:min(720px,calc(100vw - 36px));max-height:calc(100dvh - 60px);padding:25px 27px;border:1px solid #dbe4d2;border-radius:17px;background:#fbfcf9;color:var(--green);box-shadow:0 20px 100px #253c2928}
+.files-dialog::backdrop{background:#27372c45;backdrop-filter:blur(3px)}
+.files-dialog-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin-bottom:20px}
+.files-dialog-heading h2{font-size:18px;font-weight:500;color:#3c5735;margin:0}
+.files-dialog-heading p{font-size:11px;color:#92a086;margin:9px 0 0}
+.files-dialog-heading .icon-button{font-size:25px;line-height:1;padding:0 4px}
+.library-filters{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;margin-bottom:17px}
+.library-filters select{padding-right:26px}
+.library-list{display:grid;gap:9px;min-height:80px;max-height:calc(100dvh - 330px);overflow:auto}
+.library-empty{font-size:12px;color:#94a18a;margin:auto;text-align:center;padding:30px 10px}
+.managed-file-row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e0e7d9;border-radius:10px;padding:13px 14px;min-width:0}
+.managed-file-detail{flex:1;min-width:0}
+.managed-file-detail strong{display:block;font-size:12px;font-weight:500;color:#52684a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.managed-file-detail small{display:block;font-size:10px;line-height:1.7;color:#98a28e;margin-top:5px}
+.managed-file-actions{display:flex;align-items:center;gap:3px;flex:none}
+.managed-file-actions a,.managed-file-actions button{font:inherit;font-size:11px;white-space:nowrap;border:0;border-radius:6px;padding:6px 7px;background:transparent;color:#7b906c}
+.managed-file-actions a:hover,.managed-file-actions button:hover{background:#edf3e7}
+.managed-file-actions .delete-draft{color:#a28a66}
+.library-footnote{font-size:10px;line-height:1.8;color:#9aa48f;margin:17px 0 0}
+.files-dialog>.history-more{display:block;margin:5px auto 0}
+.task-list-item .pinned-mark{font-style:normal;color:#87a173;margin-right:4px}
+@media(max-width:600px){.library-button{display:inline-block;margin:0 0 0 6px;padding:8px 9px;font-size:11px}.history-controls{margin:12px 0 4px;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}.history-controls input{padding:8px 10px;font-size:11px}.history-tabs button{font-size:10px;padding:6px 7px}.task-sidebar .history-more{display:block;margin:2px auto 0;padding:7px}.files-dialog{padding:20px 17px;width:calc(100vw - 24px);max-height:calc(100dvh - 30px);border-radius:14px}.files-dialog-heading{margin-bottom:17px}.files-dialog-heading h2{font-size:17px}.library-filters{gap:7px}.library-filters input,.library-filters select{font-size:11px;padding:9px}.library-filters select{max-width:112px}.managed-file-row{padding:11px 10px;gap:8px;flex-wrap:wrap}.managed-file-detail{min-width:calc(100% - 52px)}.managed-file-detail strong{font-size:11px}.managed-file-actions{margin-left:38px}.managed-file-actions a,.managed-file-actions button{font-size:10px;padding:5px 7px}.library-list{max-height:calc(100dvh - 290px)}.rename-form{gap:3px;flex-wrap:wrap}.rename-form input{flex-basis:100%}.capacity-note{font-size:9px}.history-notice{font-size:10px}.library-footnote{font-size:9px}}

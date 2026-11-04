@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f6f3">
+  <title>纯对话 · Diagram Studio</title>
+  <link rel="stylesheet" href="chat.css">
+  <link rel="stylesheet" href="chatgpt-local.css">
+  <link rel="stylesheet" href="image-viewer.css">
+  <link rel="stylesheet" href="reasoning-slider.css">
+  <link rel="stylesheet" href="composer-controls.css">
+  <link rel="stylesheet" href="quota-meter.css">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="account-menu.css">
+  <link rel="stylesheet" href="topbar-toggle.css">
+  <script src="topbar-toggle.js"></script>
+</head>
+<body>
+  <header class="chat-topbar">
+    <a class="brand" href="/" aria-label="返回绘图工作台">
+      <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 28 28" fill="none"><rect x="3" y="3" width="9" height="9" rx="2" fill="currentColor"/><rect x="16" y="16" width="9" height="9" rx="2" stroke="currentColor" stroke-width="2"/><path d="M16 7.5h4.5V12M7.5 16v4.5H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+      <span><strong>Diagram Studio</strong><small>纯对话</small></span>
+    </a>
+    <nav class="top-actions" id="workspaceNav" aria-label="工作台导航">
+      <div data-chatgpt-mount class="chatgpt-chat-mount" hidden></div>
+      <a class="workspace-link" href="/" aria-label="返回绘图工作台" title="返回绘图工作台"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M15 6h3v6M6 15v3h6"/></svg><span>绘图</span></a>
+      <a class="workspace-link" href="/requirements.html" aria-label="需求文档成图" title="需求文档成图"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h10l4 4v14H5Z"/><path d="M14 3v5h5M8 12h8M8 16h5"/></svg><span>文档成图</span></a>
+      <div id="chatAccountMount"></div>
+    </nav>
+  </header>
+  <main class="chat-layout">
+    <aside class="history-rail" id="historyRail">
+      <button id="newChatBtn" class="new-chat-button" type="button"><span aria-hidden="true">＋</span> 新对话</button>
+      <div class="history-heading">最近对话</div>
+      <div id="conversationList" class="conversation-list" aria-label="最近对话"></div>
+      <div class="rail-footer"><span class="shared-dot"></span><span>平台共享或个人 API</span></div>
+    </aside>
+    <section class="chat-main" aria-label="纯对话">
+      <div class="conversation-head">
+        <button id="historyToggle" class="history-toggle" type="button" aria-label="显示对话列表">☰</button>
+      </div>
+      <div id="chatFeed" class="chat-feed" aria-live="off">
+        <div class="welcome" id="welcome">
+          <div class="welcome-flower" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><ellipse cx="12" cy="5" rx="1.5" ry="3.4"/><ellipse cx="12" cy="5" rx="1.5" ry="3.4" transform="rotate(45 12 12)"/><ellipse cx="12" cy="5" rx="1.5" ry="3.4" transform="rotate(90 12 12)"/><ellipse cx="12" cy="5" rx="1.5" ry="3.4" transform="rotate(135 12 12)"/><ellipse cx="12" cy="5" rx="1.5" ry="3.4" transform="rotate(180 12 12)"/><ellipse cx="12" cy="5" rx="1.5" ry="3.4" transform="rotate(225 12 12)"/><ellipse cx="12" cy="5" rx="1.5" ry="3.4" transform="rotate(270 12 12)"/><ellipse cx="12" cy="5" rx="1.5" ry="3.4" transform="rotate(315 12 12)"/></svg></div>
+          <h1>想聊点什么？</h1>
+          <p>问问题、讨论想法，上传文档，或开启多模态上传图片继续追问。</p>
+          <div class="shared-note">可使用平台共享模型，也可使用你自己配置的 API</div>
+        </div>
+      </div>
+      <div class="composer-wrap">
+        <details id="documentContext" class="document-context" hidden><summary id="documentContextSummary"></summary><div id="documentContextList"></div></details>
+        <form id="chatForm" class="composer">
+          <div id="chatAttachments" class="chat-attachments" hidden></div>
+          <textarea id="chatInput" rows="1" maxlength="4000" placeholder="输入消息…" aria-label="输入消息"></textarea>
+          <input id="chatDocumentInput" type="file" accept=".pdf,.docx,.txt,.md,.markdown,.csv" aria-label="添加文档" multiple hidden>
+          <input id="chatImageInput" type="file" accept="image/png,image/jpeg" aria-label="添加图片" multiple hidden disabled>
+          <div class="composer-bottom"><div class="composer-tools"><button id="attachDocumentBtn" type="button" aria-label="添加文档" title="添加 PDF、Word、TXT、Markdown 或 CSV"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 13 6.8-6.8a3 3 0 0 1 4.2 4.2l-9 9a5 5 0 0 1-7-7l9-9"/><path d="m6 15 8.5-8.5"/></svg></button><button id="attachImageBtn" type="button" aria-label="添加图片" title="开启多模态后添加图片" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/></svg></button><details class="composer-settings"><summary aria-label="模型与思考设置"><span class="compose-summary-model">选择模型</span><span class="compose-summary-dot" aria-hidden="true">·</span><span class="compose-summary-effort">默认</span><span class="compose-summary-caret" aria-hidden="true">⌄</span></summary><div class="composer-settings-panel"><div class="composer-config" aria-label="本次对话的模型与强度">
+            <div class="model-select-wrap" id="chatModelPicker"><select id="modelSelect" aria-label="选择平台共享模型或个人 API 模型"><option>正在加载…</option></select></div>
+            <select id="reasoningEffortSelect" aria-label="思考强度" disabled><option value="">强度：默认</option></select>
+          </div><details class="composer-extra"><summary>更多设置<span aria-hidden="true">⌄</span></summary><div class="composer-options">
+          <button id="thinkingToggle" class="chat-toggle" type="button" role="switch" aria-checked="false" disabled><span class="switch-track" aria-hidden="true"></span><span id="thinkingLabel">思考</span></button>
+          <button id="multimodalToggle" class="chat-toggle" type="button" role="switch" aria-checked="false" disabled><span class="switch-track" aria-hidden="true"></span><span>多模态</span></button>
+          <button id="detectReasoningBtn" class="reasoning-detect-button" type="button" disabled>检测强度</button>
+          <a href="/" class="chat-model-settings">绘图页设置 ↗</a>
+        </div></details></div></details></div><button id="sendBtn" type="submit" aria-label="发送消息"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div>
+        </form>
+        <p id="composerStatus" class="composer-status" role="status" hidden></p>
+        <p class="composer-hint">AI 生成的内容可能不准确，请核实重要信息。</p>
+      </div>
+    </section>
+  </main>
+  <div class="mobile-scrim" id="mobileScrim"></div>
+  <dialog id="documentPreview" class="document-preview" aria-labelledby="documentPreviewTitle"><header><div><h2 id="documentPreviewTitle"></h2><p id="documentPreviewMeta"></p></div><button id="documentPreviewClose" type="button" aria-label="关闭文档预览">×</button></header><div class="document-preview-content"><div id="documentPreviewPages" class="document-preview-pages" hidden></div><pre id="documentPreviewText"></pre></div></dialog>
+  <script src="/shared/sse.js"></script>
+  <script src="/shared/vision-check.js"></script>
+  <script src="/shared/conversation-documents.js"></script>
+  <script src="/shared/model-capabilities.js"></script>
+  <script src="image-viewer.js"></script>
+  <script src="reasoning-slider.js"></script>
+  <script src="composer-controls.js"></script>
+  <script src="quota-meter.js"></script>
+  <script src="turn-usage.js"></script>
+  <script src="vendor/katex/katex.min.js"></script>
+  <script src="chat-markdown.js"></script>
+  <script src="navigation.js"></script>
+  <script src="membership.js"></script>
+  <script src="account-menu.js"></script>
+  <script src="chat-history.js"></script>
+  <script src="chat.js"></script>
+  <script src="chatgpt-local.js"></script>
+</body>
+</html>

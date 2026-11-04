@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f5f6f3"><title>智能任务 · Diagram Studio</title>
+  <link rel="stylesheet" href="agent.css"><link rel="stylesheet" href="agent-library.css"><link rel="stylesheet" href="account-menu.css"><link rel="stylesheet" href="quota-meter.css">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <script src="navigation.js" defer></script><script src="membership.js" defer></script><script src="account-menu.js" defer></script>
+  <script src="vendor/katex/katex.min.js" defer></script><script src="chat-markdown.js" defer></script><script src="agent.js" defer></script>
+</head>
+<body>
+  <header class="agent-topbar"><a class="agent-brand" href="/">◈ <strong>Diagram Studio</strong></a><nav aria-label="工作台导航"><a href="/chat.html">对话</a><a href="/">绘图</a><a href="/admin.html">后台管理</a><div id="agentAccountMount"></div></nav></header>
+  <main class="agent-layout">
+    <aside class="task-sidebar" aria-label="任务列表">
+      <button id="newAgentTask" class="new-task" type="button">＋ 新任务</button>
+      <button id="manageAgentFiles" class="library-button" type="button" hidden>▤ 文件管理</button>
+      <div class="sidebar-heading"><h2>最近对话</h2><button id="refreshAgent" class="icon-button" type="button" aria-label="刷新任务">↻</button></div>
+      <div id="agentHistoryControls" class="history-controls" hidden><label class="sr-only" for="agentHistorySearch">搜索历史对话</label><input id="agentHistorySearch" type="search" maxlength="100" placeholder="搜索历史对话"><div class="history-tabs" aria-label="历史筛选"><button id="agentHistoryAll" type="button" aria-pressed="true">全部</button><button id="agentHistoryPinned" type="button" aria-pressed="false">长期保留</button></div></div>
+      <p id="emptyTasks" class="sidebar-empty">完成一个想法，从这里开始。</p>
+      <div id="agentTaskList" class="task-list"></div>
+      <button id="agentHistoryMore" class="history-more" type="button" hidden>加载更多历史</button>
+      <p id="agentHistoryNotice" class="history-notice" role="status" hidden></p>
+      <div class="sidebar-footer"><span class="status-dot" id="connectionDot"></span><span id="connectionLabel">正在连接服务…</span></div>
+    </aside>
+    <section class="agent-main" aria-label="智能任务工作区">
+      <div class="agent-heading"><span class="eyebrow">智能任务</span><span id="previewBadge" class="preview-badge">管理员预览</span></div>
+      <p id="agentConnection" class="connection-note" role="status">正在读取执行服务状态…</p>
+      <p id="agentCapacity" class="capacity-note" hidden></p>
+      <div id="agentWelcome" class="agent-welcome"><div class="welcome-icon" aria-hidden="true">✳</div><h1>把任务交给助手</h1><p>描述你想完成的事，助手会在服务器上持续处理。<br>随时回来查看进度和结果。</p><div class="task-examples"><button type="button" data-prompt="把下面的需求整理成一份清晰的实施计划：">整理实施计划 <span>↗</span></button><button type="button" data-prompt="帮我梳理这个问题，并给出可执行的解决步骤：">分析复杂问题 <span>↗</span></button></div></div>
+      <article id="agentDetail" class="task-detail" hidden>
+        <div class="task-detail-heading"><h1 id="agentTaskTitle"></h1><span id="agentTaskState" class="task-state"></span></div>
+        <p id="agentTurnCount" class="turn-count"></p>
+        <div id="agentRenameForm" class="rename-form" hidden><label class="sr-only" for="agentConversationTitle">对话名称</label><input id="agentConversationTitle" maxlength="80" placeholder="给这段对话起个名字"><button id="saveAgentTitle" class="secondary-button" type="button">保存</button><button id="dismissAgentTitle" class="text-button" type="button">取消</button></div>
+        <div id="agentPreviousTurns" class="agent-previous-turns"></div>
+        <div class="turn-label" id="agentCurrentTurnLabel">你</div>
+        <p id="agentTaskPrompt" class="task-prompt"></p>
+        <div id="agentTaskAttachments" class="agent-file-list" aria-label="本轮资料"></div>
+        <div class="task-progress" id="agentProgress"><span class="progress-mark" aria-hidden="true"></span><span id="agentTaskMessage" role="status"></span></div>
+        <div id="agentOutput" class="agent-output"></div>
+        <div id="agentArtifacts" class="agent-file-list agent-artifacts" aria-label="生成的文件"></div>
+        <div id="agentTurnUsage" class="agent-turn-usage" aria-label="本轮用量" hidden></div>
+        <p id="agentRetention" class="retention-note"></p>
+        <div class="task-actions"><button id="continueAgentTask" class="secondary-button" type="button" hidden>继续追问 ↓</button><button id="recoverAgentTask" class="secondary-button" type="button" hidden>恢复任务状态</button><button id="cancelAgentTask" class="secondary-button" type="button" hidden>停止任务</button><button id="copyAgentResult" class="secondary-button" type="button" hidden>复制结果</button><button id="downloadAgentResult" class="secondary-button" type="button" hidden>下载结果</button><button id="pinAgentConversation" class="text-button" type="button" hidden>长期保留</button><button id="renameAgentConversation" class="text-button" type="button" hidden>重命名</button><button id="removeAgentTask" class="text-button" type="button" hidden>清理对话</button></div>
+        <p id="agentRecoveryHint" class="agent-notice" hidden>系统会检查并结束遗留的异常任务，保留已收到的内容；不会重新调用模型。</p>
+        <div id="agentRemoveConfirm" class="remove-confirm" hidden><p>清理后将删除这段对话的所有轮次及上下文、资料和生成文件，请先下载需要保留的内容。</p><button id="confirmRemoveAgent" class="secondary-button" type="button">确认清理</button><button id="dismissRemoveAgent" class="text-button" type="button">保留记录</button></div>
+      </article>
+      <div class="agent-composer-wrap"><p id="agentConversationHint" class="conversation-hint" role="status"></p><form id="agentForm" class="agent-composer"><div id="agentDraftAttachments" class="agent-file-list draft-files" aria-label="待发送资料"></div><label class="sr-only" for="agentPrompt">任务内容</label><textarea id="agentPrompt" rows="3" maxlength="4000" placeholder="描述你的任务，说明希望得到什么结果…"></textarea><div class="composer-footer"><div class="composer-tools"><input id="agentFileInput" class="sr-only" type="file" multiple accept=".pdf,.docx,.txt,.md,.markdown,.csv,.json,.js,.ts,.tsx,.jsx,.py,.html,.css,.svg,.drawio,.xml,.yaml,.yml,.sql,.log"><button id="attachAgentFiles" class="attach-files-button" type="button" title="添加 PDF、Word 或文本，每份不超过 5 MB，PDF 最多 50 页" hidden><span aria-hidden="true">＋</span> 添加资料</button><div id="agentModelControl" class="agent-model-control" hidden><label class="sr-only" for="agentModelSelect">任务模型</label><span id="agentModelLock" class="agent-model-lock" aria-hidden="true" hidden>▣</span><select id="agentModelSelect" aria-label="任务模型"></select></div><span id="agentComposeHint">DSH · 独立执行</span></div><button id="submitAgentTask" type="submit" class="primary-button" disabled>提交任务 <span aria-hidden="true">↑</span></button></div><p id="agentUploadStatus" class="agent-upload-status" role="status" hidden></p></form><p id="agentModelNote" class="agent-model-note" hidden></p><p id="agentFileHint" class="agent-file-hint" hidden>支持 PDF、Word 和文本 · 最多 5 份，每份 5 MB · PDF 最多 50 页</p><p id="agentNotice" class="agent-notice" role="status"></p><p id="agentFootnote" class="agent-footnote">预览阶段仅供管理员测试，普通用户暂未开放。任务正文保留 24 小时。</p></div>
+    </section>
+  </main>
+  <dialog id="agentFilesDialog" class="files-dialog" aria-labelledby="agentFilesTitle"><div class="files-dialog-heading"><div><h2 id="agentFilesTitle">文件管理</h2><p id="agentStorageUsage"></p></div><button id="closeAgentFiles" class="icon-button" type="button" aria-label="关闭文件管理">×</button></div><div class="library-filters"><label class="sr-only" for="agentLibrarySearch">搜索文件</label><input id="agentLibrarySearch" type="search" maxlength="100" placeholder="搜索文件名"><label class="sr-only" for="agentLibraryKind">文件类型</label><select id="agentLibraryKind"><option value="">全部文件</option><option value="upload">上传资料</option><option value="artifact">生成文件</option></select></div><div id="agentLibraryList" class="library-list"></div><p id="agentLibraryNotice" class="agent-notice" role="status"></p><button id="agentLibraryMore" class="history-more" type="button" hidden>加载更多文件</button><p class="library-footnote">已用于对话的资料和产物，请在对应对话中整体清理。</p></dialog>
+</body>
+</html>

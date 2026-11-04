@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>后台管理 · Diagram Studio</title>
+  <link rel="stylesheet" href="quota-meter.css"><link rel="stylesheet" href="admin.css">
+  <script src="membership.js" defer></script><script src="admin.js" defer></script>
+</head>
+<body>
+  <header class="admin-topbar"><a class="brand" href="/">◈ <strong>Diagram Studio</strong><span>管理后台</span></a><nav aria-label="工作台导航"><a href="/chat.html">对话</a><a href="/">绘图</a><a href="/usage.html">用量统计</a><a href="/agent.html">智能任务预览</a><span id="adminName"></span><button id="adminLogout" type="button">退出</button></nav></header>
+  <main>
+    <div class="page-heading"><div><p class="eyebrow">ADMIN</p><h1>后台管理</h1><p class="muted">管理用户、会员和每周额度。</p></div><button id="refreshBtn" type="button">刷新</button></div>
+    <p id="adminStatus" role="status">正在读取管理信息…</p>
+    <div id="adminContent" hidden>
+      <section class="overview" aria-label="账号概览"><article><span>用户总数</span><strong id="userCount">—</strong></article><article><span>正常账号</span><strong id="activeCount">—</strong></article><article><span>Pro / Max</span><strong id="memberCount">—</strong></article><article><span>全站免费 · 今日</span><strong id="freeCount">—</strong></article></section>
+      <section class="panel bulk-quota" aria-label="批量额度操作">
+        <div><h2>批量操作</h2><p class="check-note">重置个人周额度；批量发卡仅限当前有效的 Pro / Max。与账号搜索无关。</p></div>
+        <div class="bulk-quota-actions"><button id="bulkResetBtn" type="button">一键重置周额度</button><label>每人<input id="bulkCardCount" type="number" min="1" max="1000" step="1" value="1" inputmode="numeric" aria-label="每位 Pro 或 Max 的重置卡数量">张</label><button id="bulkGrantBtn" type="button">一键发放重置卡</button></div>
+        <div id="bulkConfirm" class="reset-card-confirm" hidden><p id="bulkQuestion" class="check-note"></p><p id="bulkTargets" class="check-note"></p><div class="reset-card-actions"><button id="bulkConfirmBtn" class="banner-btn primary" type="button">确认执行</button><button id="bulkCancelBtn" type="button">取消</button></div></div>
+        <p id="bulkStatus" class="check-note" role="status"></p>
+      </section>
+      <div class="admin-grid">
+        <section class="panel users-panel"><div class="section-heading"><h2>用户管理</h2><label class="search-label"><span class="sr-only">搜索账号</span><input id="userSearch" type="search" placeholder="搜索账号…" autocomplete="off"></label></div><p class="muted">修改会员和额度立即生效，保留本周已用点数。</p><div id="adminUsers" class="cloud-users"></div><p id="noUsers" class="muted" hidden>没有匹配的账号。</p></section>
+        <aside class="side-panels"><section class="panel"><h2>创建用户</h2><div id="adminCreate"></div></section><section class="panel"><h2>会员默认额度</h2><div id="adminPlans"></div></section></aside>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
