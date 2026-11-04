@@ -1,0 +1,24 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),crypto=require('node:crypto');
+const {run}=require('../../scripts/cloud-tools.cjs'),{CloudRuntime}=require('../../lib/cloud-runtime');
+const temp=()=>fs.mkdtempSync(path.join(os.tmpdir(),'diagram-cloud-ops-'));
+const config=dir=>({APP_MODE:'cloud',PUBLIC_ORIGIN:'https://diagram.example',CLOUD_DATA_DIR:path.join(dir,'data'),CLOUD_MASTER_KEY:crypto.randomBytes(32).toString('base64'),CLOUD_ADMIN_USERNAME:'admin',CLOUD_ADMIN_PASSWORD:'fixture-password-123'});
+test('部署配置生成随机密钥与密码，不覆盖已有环境文件，返回值无密钥',()=>{
+ const dir=temp(),a=run(['setup','--origin','https://diagram.example','--out',path.join(dir,'a')]),b=run(['setup','--origin','https://diagram.example','--out',path.join(dir,'b')]);
+ assert.notEqual(fs.readFileSync(a.environmentFile,'utf8'),fs.readFileSync(b.environmentFile,'utf8'));assert.equal(fs.statSync(a.environmentFile).mode&0o777,0o600);assert.deepEqual(Object.keys(a),['environmentFile']);assert.throws(()=>run(['setup','--origin','https://diagram.example','--out',a.environmentFile]));assert.throws(()=>run(['setup','--origin','http://diagram.example']));
+ const generated=fs.readFileSync(a.environmentFile,'utf8');assert.match(generated,/^CLOUD_WEEKLY_POINTS=1000$/m);assert.match(generated,/^CLOUD_FREE_MODELS='\[\]'$/m);assert.doesNotMatch(generated,/CLOUD_USER_DAILY_LIMIT/);assert.match(generated,/^CLOUD_PLATFORM_DAILY_LIMIT=200$/m);assert.doesNotMatch(generated,/CLOUD_TOTAL_DAILY_LIMIT/);
+});
+test('备份恢复保留个人模型、用户与额度，撤销旧会话，不覆盖原数据',async()=>{
+ const dir=temp(),env=config(dir),runtime=new CloudRuntime(env,dir),store=runtime.providerStore(runtime.data.users[0].id);await store.createProvider({providerId:'p',name:'fixture',protocol:'openai-chat-completions',baseUrl:'https://api.example',apiKey:'ops-private-fixture'});await store.addModel('p',{modelId:'m'});runtime.change(d=>{d.usage.platform=2;d.sessions=[{hash:'fixture',userId:d.users[0].id}];});
+ const backup=path.join(dir,'data.backup'),out=path.join(dir,'restored');run(['backup','--out',backup,'--confirm-stopped'],env);assert.ok(!fs.readFileSync(backup,'utf8').includes('ops-private-fixture'));run(['restore','--from',backup,'--out',out,'--confirm-stopped'],env);
+ const restored=new CloudRuntime({...env,CLOUD_DATA_DIR:out},dir);assert.equal(restored.data.sessions.length,0);assert.equal(restored.data.usage.platform,2);assert.equal(restored.providerStore(runtime.data.users[0].id).getRaw('p').apiKey,'ops-private-fixture');assert.throws(()=>run(['restore','--from',backup,'--out',out,'--confirm-stopped'],env));assert.throws(()=>run(['backup','--out',path.join(dir,'unsafe.backup')],env));
+});
+test('主密钥轮换产生新目录与独立密钥文件，旧数据可回滚，新数据只用新密钥',()=>{
+ const dir=temp(),env=config(dir),runtime=new CloudRuntime(env,dir),out=path.join(dir,'rotated'),keyFile=path.join(dir,'new.master-key'),original=fs.readFileSync(runtime.file);
+ run(['rekey','--out',out,'--key-out',keyFile,'--confirm-stopped'],env);assert.deepEqual(fs.readFileSync(runtime.file),original);assert.throws(()=>new CloudRuntime({...env,CLOUD_DATA_DIR:out},dir));const restored=new CloudRuntime({...env,CLOUD_DATA_DIR:out,CLOUD_MASTER_KEY:fs.readFileSync(keyFile,'utf8').trim()},dir);assert.equal(restored.data.users[0].username,'admin');assert.equal(fs.statSync(keyFile).mode&0o777,0o600);
+});
+test('恢复拒绝错误密钥、损坏文件和路径穿越，失败不创建目标目录',()=>{
+ const dir=temp(),env=config(dir);new CloudRuntime(env,dir);const file=path.join(dir,'data.backup');run(['backup','--out',file,'--confirm-stopped'],env);const out=path.join(dir,'restored');assert.throws(()=>run(['restore','--from',file,'--out',out,'--confirm-stopped'],{...env,CLOUD_MASTER_KEY:crypto.randomBytes(32).toString('base64')}));assert.equal(fs.existsSync(out),false);const bundle=JSON.parse(fs.readFileSync(file));bundle.files['../escape']=bundle.files['state.enc'];fs.writeFileSync(file,JSON.stringify(bundle));assert.throws(()=>run(['restore','--from',file,'--out',out,'--confirm-stopped'],env));assert.equal(fs.existsSync(out),false);
+});
+test('离线密码恢复先备份并撤销该用户会话，新密码真实可登录',async()=>{
+ const dir=temp(),env=config(dir),runtime=new CloudRuntime(env,dir);runtime.change(d=>d.sessions=[{hash:'fixture',userId:d.users[0].id}]);const result=run(['reset-password','--username','admin','--confirm-stopped'],{...env,CLOUD_RECOVERY_PASSWORD:'12345678'});assert.ok(fs.existsSync(result.backup));const restored=new CloudRuntime(env,dir);assert.equal(restored.data.sessions.length,0);const req={headers:{host:'diagram.example',origin:'https://diagram.example'},socket:{remoteAddress:'127.0.0.1'}};await assert.rejects(restored.login(req,{username:'admin',password:env.CLOUD_ADMIN_PASSWORD},{setHeader(){}}));assert.equal((await restored.login(req,{username:'admin',password:'12345678'},{setHeader(){}})).user.username,'admin');
+});
