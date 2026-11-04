@@ -1,0 +1,31 @@
+# Administrator pilot: no shell, file or working-directory tools are exposed.
+# The worker identity is separately denied access to QQ and bridge credentials.
+- id: llm-deepseek
+  disabled: true
+- id: tool-fs
+  disabled: true
+- id: tool-working-directory
+  disabled: true
+- id: persistent-bash
+  disabled: true
+- id: persistent-pwsh
+  disabled: true
+- id: sandbox-policy
+  config:
+    mode: read-only
+- insert:
+    - id: diagram-site-llm
+      name: '@deepseek-ai/dsh-llm-pi-ai'
+      config:
+        providers:
+          diagram-site:
+            api: openai-completions
+            apiKeyEnv: DIAGRAM_AGENT_API_KEY
+            baseURL: !!js process.env.DIAGRAM_AGENT_BASE_URL
+            models:
+              - id: !!js process.env.DIAGRAM_AGENT_MODEL
+                name: Site Luna
+                contextWindow: 128000
+                maxTokens: 8192
+                input: [text]
+                reasoningEfforts: false
