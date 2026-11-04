@@ -1,0 +1,43 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import net from 'node:net';
+import crypto from 'node:crypto';
+import {spawn} from 'node:child_process';
+import {ROOT,makeBrowser,makeChecker} from './lib/browser-harness.mjs';
+const probe=net.createServer();await new Promise(resolve=>probe.listen(0,'127.0.0.1',resolve));const port=probe.address().port;await new Promise(resolve=>probe.close(resolve));
+const origin='http://127.0.0.1:'+port,directory=fs.mkdtempSync(path.join(os.tmpdir(),'diagram-math-browser-')),out=path.join(ROOT,'acceptance/chat-math');fs.mkdirSync(out,{recursive:true});
+const app=spawn(process.execPath,['tests/helpers/weekly-quota-browser-fixture.cjs'],{cwd:ROOT,env:{...process.env,MATH_RENDER_FIXTURE:'true',APP_MODE:'cloud',PUBLIC_ORIGIN:origin,CLOUD_ALLOW_HTTP_LOOPBACK:'true',CLOUD_DATA_DIR:directory,CLOUD_MASTER_KEY:crypto.randomBytes(32).toString('base64'),CLOUD_ADMIN_USERNAME:'admin',CLOUD_ADMIN_PASSWORD:'fixture-password-123',CLOUD_CHATGPT_OWNER:'admin',PORT:String(port),DEEPSEEK_API_KEY:'',CLOUD_FREE_MODELS:JSON.stringify(['deepseek-ai/DeepSeek-V4.1-Flash','Qwen/Qwen3.8-27B','Qwen/Qwen3.8-Flash-Next'].map(modelId=>({providerId:'mota',modelId}))),DRAWIO_EMBED_URL:origin+'/fixture-editor'},stdio:['ignore','pipe','pipe']});
+let serverLog='';app.stderr.on('data',chunk=>serverLog+=chunk);
+await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('公式 fixture 启动超时 '+serverLog)),15000);app.stdout.on('data',chunk=>{if(chunk.toString().includes('WEEKLY_QUOTA_FIXTURE_READY')){clearTimeout(timer);resolve();}});app.once('exit',()=>{clearTimeout(timer);reject(Error('公式 fixture 退出 '+serverLog));});});
+const browser=makeBrowser('chat-math-'+Date.now()),{ab,evalJson,evalRaw,waitFor}=browser,{check,results,failures}=makeChecker();
+const run=async code=>{evalRaw(`window.mathOperation=null;(async()=>{${code}})().then(value=>window.mathOperation=value).catch(error=>window.mathOperation={error:error.message});true`);return waitFor('公式操作','JSON.stringify(window.mathOperation)',value=>value!==null);};
+const body='.message.assistant .message-body';
+try{
+ ab(['set','viewport','1280','1080']);ab(['open',origin+'/login.html?next=%2Fchat.html']);ab(['fill','#loginUsername','alice']);ab(['fill','#loginPassword','fixture-password-123']);ab(['click','#loginBtn']);await waitFor('模型可用','document.getElementById("modelSelect")?.disabled',disabled=>disabled===false);
+ ab(['select','#modelSelect','platform:mota/future-open-model']);ab(['fill','#chatInput','请解释公式 \\(u\\)，用户原文保留。']);ab(['click','#sendBtn']);
+ const partial=await waitFor('流式公式出现',`JSON.stringify({count:document.querySelectorAll('${body} .katex').length,label:document.getElementById('sendBtn').getAttribute('aria-label')})`,value=>value.count>0);
+ check('流式回复未结束时已渲染完整的公式',partial.label!=='发送消息');
+ await waitFor('回复和费用完整',`JSON.stringify({count:document.querySelectorAll('${body} .katex').length,label:document.getElementById('sendBtn').getAttribute('aria-label'),fee:document.getElementById('chatFeed').textContent.includes('本轮消耗：0.6 点')})`,value=>value.count===11&&value.label==='发送消息'&&value.fee);
+ check('截图公式、美元公式、跨行公式共11个均成功渲染',evalJson(`document.querySelectorAll('${body} .katex').length===11&&document.querySelectorAll('${body} .chat-math-fallback').length===0`));
+ check('分数、上下标和独立公式正常形成数学结构',evalJson(`document.querySelectorAll('${body} .chat-math-display').length===2&&!!document.querySelector('${body} .katex-mathml mfrac')&&!!document.querySelector('${body} .katex-mathml msub')`));
+ check('正常Markdown列表和粗体保持',evalJson(`document.querySelectorAll('${body} li').length===2&&document.querySelectorAll('${body} strong').length>=3`));
+ check('用户原文不自动变成数学公式',evalJson(`document.querySelector('.message.user .message-body').textContent.includes(${JSON.stringify(String.raw`\(`)})&&!document.querySelector('.message.user .katex')`));
+ check('代码块和行内代码原样保留公式标记',evalJson(`document.querySelector('${body} pre code').textContent.includes(${JSON.stringify(String.raw`\[`)})&&!document.querySelector('${body} code .katex')&&[...document.querySelectorAll('${body} p code')].some(n=>n.textContent===${JSON.stringify(String.raw`\(x\)`)})`));
+ await run(`await document.fonts.ready;return true;`);
+ check('实际数学字体已加载，全部公式资源由本站提供',evalJson(`[...document.fonts].some(font=>font.family.includes('KaTeX')&&font.status==='loaded')&&performance.getEntriesByType('resource').filter(e=>e.name.includes('/vendor/katex/')).every(e=>new URL(e.name).origin===location.origin)`));
+ const font=await run(`const r=await fetch('/vendor/katex/fonts/KaTeX_Main-Regular.woff2');return {status:r.status,type:r.headers.get('Content-Type')};`);check('字体资源正确返回woff2类型',font.status===200&&font.type==='font/woff2');
+ const saved=await run(`const s=await(await fetch('/api/auth/session')).json();return await new Promise((resolve,reject)=>{const r=indexedDB.open('diagramai.pureChat',1);r.onsuccess=()=>{const db=r.result,q=db.transaction('accounts').objectStore('accounts').get(s.user.id);q.onsuccess=()=>{db.close();const reply=(q.result||[]).flatMap(chat=>chat.messages).filter(m=>m.role==='assistant').at(-1);resolve(reply?.content||'');};q.onerror=()=>reject(q.error);};r.onerror=()=>reject(r.error);});`);
+ check('历史保存原始公式文本，不把排版HTML带入后续模型上下文',typeof saved==='string'&&saved.includes(String.raw`\le`)&&!saved.includes('class="katex"'));
+ evalRaw(`document.getElementById('chatFeed').scrollTop=0;true`);ab(['screenshot',path.join(out,'math-desktop.png')]);
+ ab(['open',origin+'/chat.html']);await waitFor('旧回复重新排版',`document.querySelectorAll('${body} .katex').length`,count=>count===11);
+ check('刷新后历史回复自动渲染公式，费用保留',evalJson(`document.querySelectorAll('${body} .katex').length===11&&document.getElementById('chatFeed').textContent.includes('本轮消耗：0.6 点')`));
+ ab(['set','viewport','320','844']);await waitFor('手机侧栏收起','document.getElementById("historyRail").getBoundingClientRect().right',right=>right<=0);
+ evalRaw(`document.getElementById('chatFeed').scrollTop=0;true`);check('320px公式不会撑宽页面',evalJson('document.documentElement.scrollWidth<=innerWidth'));
+ check('长公式限制在消息内并可水平滚动',evalJson(`[...document.querySelectorAll('${body} .chat-math-display')].some(n=>n.scrollWidth>n.clientWidth)&&[...document.querySelectorAll('${body} .chat-math-display')].every(n=>n.getBoundingClientRect().right<=innerWidth)`));ab(['screenshot',path.join(out,'math-320.png')]);
+ const security=await run(`const node=document.createElement('div');node.innerHTML=window.DiagramMarkdown.render(${JSON.stringify(String.raw`\(\href{javascript:alert(1)}{x}\) <img src=x onerror=alert(1)>`)});return !node.querySelector('img,script,a[href^="javascript:"]');`);check('不受信任的内容不会生成活动HTML',security===true);
+ check('仅一次本地模型调用，刷新和排版不扣额度',(await run(`return(await(await fetch('/fixture-stats')).json()).gatewayCalls;`))===1);
+}catch(error){check('公式浏览器流程',false,error.stack);try{ab(['screenshot',path.join(out,'failure.png')]);fs.writeFileSync(path.join(out,'failure.txt'),ab(['snapshot']).out);}catch{}}finally{
+ fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({localGateway:true,externalModelCalls:0,results},null,2));ab(['close'],{allowFail:true});app.kill('SIGTERM');
+}
+console.log(`${results.length-failures()}/${results.length} passed; ${out}`);if(failures())process.exitCode=1;

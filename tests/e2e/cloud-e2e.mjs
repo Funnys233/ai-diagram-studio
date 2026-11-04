@@ -1,0 +1,73 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import http from 'node:http';
+import {spawnSync,fork} from 'node:child_process';
+import {createRequire} from 'node:module';
+import {ROOT,startServer,makeBrowser,makeChecker} from './lib/browser-harness.mjs';
+const require=createRequire(import.meta.url),{sampleModel}=require('../helpers/fixtures');
+const out=path.join(ROOT,'acceptance/cloud-p0');fs.mkdirSync(out,{recursive:true});
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'diagram-cloud-browser-'));
+const certificate=spawnSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-keyout',path.join(dir,'key.pem'),'-out',path.join(dir,'cert.pem'),'-days','1','-subj','/CN=127.0.0.1'],{encoding:'utf8'});if(certificate.status!==0)throw Error('测试证书生成失败');
+let calls=[],outputs=[],hold=false,closed=0,listCalls=[];
+const gateway=http.createServer((req,res)=>{let raw='';req.on('data',c=>raw+=c);req.on('end',()=>{const call={body:JSON.parse(raw||'{}'),headers:req.headers};
+ if(req.method==='GET'){listCalls.push(call);res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({data:[{id:'qwen-fixture'}]}));return;}
+ calls.push(call);
+ if(hold){res.writeHead(200,{'Content-Type':'text/event-stream'});res.flushHeaders();res.write('data: '+JSON.stringify({choices:[{index:0,delta:{reasoning_content:'正在读取画面'}}]})+'\n\n');res.on('close',()=>{if(!res.writableEnded)closed++;});return;}
+ const text=outputs.shift()||sampleModel();res.writeHead(200,{'Content-Type':'application/json'});res.end(JSON.stringify({choices:[{message:{content:text},finish_reason:'stop'}],usage:{total_tokens:30}}));
+});});await new Promise(r=>gateway.listen(0,'127.0.0.1',r));
+const origin='https://127.0.0.1:8277',env={APP_MODE:'cloud',PUBLIC_ORIGIN:origin,CLOUD_DATA_DIR:path.join(dir,'data'),CLOUD_MASTER_KEY:crypto.randomBytes(32).toString('base64'),CLOUD_ADMIN_USERNAME:'admin',CLOUD_ADMIN_PASSWORD:'fixture-password-123',NODE_OPTIONS:'--require '+path.join(ROOT,'tests/helpers/cloud-network-fixture.cjs'),DIAGRAM_TEST_GATEWAY:'http://127.0.0.1:'+gateway.address().port};
+let app=await startServer({port:8276,env});
+// The CLI blocks this parent while navigating: the proxy needs its own event loop.
+const proxy=fork(path.join(ROOT,'tests/helpers/cloud-https-proxy.cjs'),[],{env:{...process.env,DIAGRAM_TEST_TLS_KEY:path.join(dir,'key.pem'),DIAGRAM_TEST_TLS_CERT:path.join(dir,'cert.pem')},stdio:['ignore','ignore','inherit','ipc']});
+await new Promise((resolve,reject)=>{proxy.once('message',resolve);proxy.once('exit',()=>reject(Error('测试代理启动失败')));});
+const session='cloud-p0-'+Date.now(),browser=makeBrowser(session),{check,results,failures}=makeChecker();
+const ab=(args,options)=>browser.ab(['--ignore-https-errors',...args],options),{evalRaw,evalJson,waitFor}=browser;
+const h='window.__DIAGRAM_AI_TEST__';const st=`JSON.stringify({ready:${h}?.state.ready,busy:${h}?.state.busy,sessionBusy:${h}?.state.sessionBusy,history:${h}?.state.history,model:${h}?.state.modelXml,loads:${h}?.state.loadCount,draft:document.getElementById('chatInput')?.value})`;
+const run=async code=>{evalRaw(`window.operation=null;(async()=>{${code}})().then(r=>window.operation=r).catch(e=>window.operation={error:e.message});'started'`);return waitFor('操作','JSON.stringify(window.operation)',s=>s!==null);};
+const request=async(url,body,method='POST')=>run(`const r=await fetch(${JSON.stringify(url)},{method:${JSON.stringify(method)},headers:{'Content-Type':'application/json'},body:${body===undefined?'undefined':JSON.stringify(JSON.stringify(body))}});return {status:r.status,body:await r.json()};`);
+const ready=async()=>{ab(['open',origin+'/?test=1']);await waitFor('编辑器初始化',st,s=>s.ready&&!s.sessionBusy,{timeout:90000});};
+const login=async username=>{ab(['fill','#loginUsername',username]);ab(['fill','#loginPassword','fixture-password-123']);ab(['click','#loginBtn']);await waitFor('进入工作台','location.pathname',s=>s==='/');await ready();};
+const generate=prompt=>{ab(['fill','#chatInput',prompt]);ab(['click','#sendBtn']);};
+const waitCall=async count=>{for(let i=0;i<300;i++){if(calls.length===count)return;await new Promise(r=>setTimeout(r,10));}throw Error('上游调用等待超时');};
+try{
+ ab(['set','viewport','1280','900']);ab(['open',origin+'/?test=1']);await waitFor('登录门禁','location.pathname',s=>s==='/login.html');check('未登录进入工作台自动转到登录页',evalJson('document.getElementById("loginForm")!==null')&&calls.length===0);ab(['screenshot',path.join(out,'01-login.png')]);
+ ab(['fill','#loginUsername','admin']);ab(['fill','#loginPassword','incorrect-fixture']);ab(['click','#loginBtn']);await waitFor('错误密码反馈','document.getElementById("loginError").textContent',s=>s.includes('密码'));check('错误密码显示通用错误且不进入工作台',evalJson('location.pathname')==='/login.html');
+ await login('admin');check('管理员登录后显示账号与每日用量',evalJson('window.DiagramCloud.user.role')==='admin'&&evalJson('!!document.getElementById("cloudUsage")'));
+ const cookies=JSON.parse(ab(['--json','cookies','get']).out);const cookie=(Array.isArray(cookies)?cookies:cookies.data?.cookies||cookies.cookies||[]).find(c=>c.name==='__Host-diagram_session');check('HTTPS 会话Cookie设置Secure、HttpOnly与Strict',cookie?.secure&&cookie?.httpOnly&&cookie?.sameSite==='Strict');
+ ab(['click','#cloudAccountSummary']);ab(['fill','#cloudInviteUsername','alice']);ab(['fill','#cloudInvitePassword','fixture-password-123']);ab(['click','#cloudInviteForm button']);await waitFor('管理员创建用户','document.getElementById("cloudInviteHint").textContent',s=>s.includes('已创建'));check('管理员可在账号菜单创建邀请用户',evalJson('document.getElementById("cloudInvitePassword").value')==='');ab(['click','#cloudAccountSummary']);
+ ab(['click','#modelSettingsBtn']);ab(['select','#cloudApiScope','platform']);await waitFor('切换平台管理','window.DiagramCloud.scope',s=>s==='platform');
+ const provider={providerId:'shared',name:'测试网关',baseUrl:'https://api.fixture.example',protocol:'openai-chat-completions',apiKey:'platform-browser-fixture'};
+ ab(['click','#addTemplateBtn']);ab(['click','#customProviderBtn']);
+ for(const [id,value] of [['pfBaseUrl',provider.baseUrl],['pfApiKey',provider.apiKey]])ab(['fill','#'+id,value]);
+ ab(['click','#fetchModelsBtn']);await waitFor('未保存获取模型','document.getElementById("fetchResult").textContent',s=>s.includes('qwen-fixture'));
+ check('未填写名称和ID、未保存提供商也能通过表单获取模型',listCalls.length===1&&listCalls[0].headers.authorization==='Bearer platform-browser-fixture'&&evalJson(`${h}.state.providers.length`)===0);
+ ab(['click','#fetchResult .fetch-row button']);check('选中模型显示待保存而不创建提供商',evalJson('document.getElementById("providerModels").textContent.includes("待保存")')&&evalJson(`${h}.state.providers.length`)===0);
+ for(const [id,value] of [['pfProviderId',provider.providerId],['pfName',provider.name]])ab(['fill','#'+id,value]);
+ evalRaw("document.getElementById('saveProviderBtn').scrollIntoView({block:'center'});true");ab(['click','#saveProviderBtn']);await waitFor('提供商和模型一起保存',`JSON.stringify(${h}.state.providers.some(p=>p.providerId==='shared'&&p.models.some(m=>m.modelId==='qwen-fixture')))`,s=>s===true);
+ check('保存提供商时一次提交选中模型',evalJson(`${h}.state.providers.find(p=>p.providerId==='shared').models.length`)===1);
+ check('预设模型可配置识图能力',(await request('/api/providers/shared/models/qwen-fixture',{visionInput:true,thinkingMode:'enable-thinking-off'},'PUT')).status===200);
+ await run(`await ${h}.refreshModelData();return true;`);check('平台预设出现在模型目录并标明来源',evalJson(`${h}.state.modelCatalog.providers.some(p=>p.providerId==='platform:shared'&&p.name.includes('平台模型'))`));ab(['click','#drawerCloseBtn']);
+ await run(`return ${h}.loadPayload(${JSON.stringify(sampleModel())});`);await run(`${h}.setDraft('管理员未发送草稿');return ${h}.flushSession();`);
+ ab(['click','#cloudAccountSummary']);ab(['click','#cloudLogoutBtn']);await waitFor('退出','location.pathname',s=>s==='/login.html');await login('alice');
+ check('普通用户登录不继承管理员图表、草稿或模型偏好',evalJson(st).draft===''&&!evalJson(st).model.includes('value="处理"'));ab(['click','#modelSettingsBtn']);check('普通用户设置仅显示我的 API，目录仍可使用平台模型',evalJson('document.querySelector("#cloudApiScope option[value=platform]")===null')&&evalJson(`${h}.state.modelCatalog.providers.some(p=>p.providerId==='platform:shared')`));
+ ab(['click','#addTemplateBtn']);ab(['click','#customProviderBtn']);
+ for(const [id,value] of [['pfProviderId','shared'],['pfName','我的网关'],['pfBaseUrl','https://api.fixture.example'],['pfApiKey','personal-browser-fixture']])ab(['fill','#'+id,value]);evalRaw("document.getElementById('saveProviderBtn').scrollIntoView({block:'center'});true");ab(['click','#saveProviderBtn']);
+ const save=await waitFor('个人提供商保存',`JSON.stringify({saved:${h}.state.providers.some(p=>p.providerId==='shared'),toast:document.getElementById('toast').textContent,errors:[...document.querySelectorAll('#providerForm .field-error')].map(e=>e.textContent).filter(Boolean),stale:${h}.settingsState().staleBannerVisible})`,s=>s.saved||s.toast.includes('保存失败')||s.errors.length||s.stale);if(!save.saved)throw Error('个人 API 保存反馈 '+JSON.stringify(save));
+ ab(['fill','#nmModelId','qwen-fixture']);evalRaw("document.getElementById('addModelBtn').scrollIntoView({block:'center'});true");ab(['click','#addModelBtn']);await waitFor('个人模型保存',`JSON.stringify(${h}.state.modelCatalog.providers.some(p=>p.providerId==='personal:shared'&&p.models.length===1))`,s=>s===true);
+ check('用户自定义 API 经真实表单保存，同名配置与平台分开',evalJson(`${h}.state.modelCatalog.providers.filter(p=>p.providerId.endsWith(':shared')).length`)===2);ab(['screenshot',path.join(out,'02-personal-api.png')]);ab(['click','#drawerCloseBtn']);
+ await run(`await ${h}.loadPayload(${JSON.stringify(sampleModel())});${h}.setModelSelection({providerId:'platform:shared',modelId:'qwen-fixture'});return true;`);const first=calls.length;outputs=['我看到开始、处理、结束三个节点。'];ab(['click','#multimodalToggle']);generate('请描述当前画面，暂时不要修改');await waitFor('平台识图回答',st,s=>!s.busy&&s.history.at(-1)?.content.includes('三个节点'));check('平台模型经 HTTPS 接收真实画布截图与XML',calls.length===first+1&&calls.at(-1).headers.authorization==='Bearer platform-browser-fixture'&&calls.at(-1).body.messages.at(-1).content.some(p=>p.type==='image_url'));
+ const png=calls.at(-1).body.messages.at(-1).content.find(p=>p.type==='image_url').image_url.url;const image=path.join(dir,'reference.png');fs.writeFileSync(image,Buffer.from(png.split(',')[1],'base64'));ab(['upload','#chatImageInput',image]);await waitFor('附件读取',`JSON.stringify({n:${h}.state.attachments.length,busy:${h}.state.attachmentsImporting})`,s=>s.n===1&&!s.busy);outputs=['参考图收到了，可继续对话。'];generate('结合这张参考图再看看');await waitFor('图片回复',st,s=>!s.busy&&s.history.at(-1)?.content.includes('参考图收到了'));check('图片和多轮上下文通过代理到达模型',calls.at(-1).body.messages.at(-1).content.filter(p=>p.type==='image_url').length===2&&JSON.stringify(calls.at(-1).body).includes('三个节点'));
+ ab(['click','#thinkingToggle']);await waitFor('独立思考偏好',`JSON.stringify(${h}.state.modelCatalog.providers.find(p=>p.providerId==='platform:shared').models[0].thinkingMode)`,s=>s==='enable-thinking-on');check('普通用户可修改本人思考偏好，无需平台管理权限',evalJson('document.getElementById("thinkingToggle").getAttribute("aria-checked")==="true"'));
+ ab(['click','#multimodalToggle']);await run(`${h}.setModelSelection({providerId:'personal:shared',modelId:'qwen-fixture'});return true;`);const before=evalJson(st).loads,n=calls.length;outputs=['<mxGraphModel><root>',sampleModel().replace('value="处理"','value="个人模型修改"')];generate('将处理中间节点改个标题');await waitFor('个人模型纠错改图',st,s=>!s.busy&&s.loads===before+1);check('个人模型 XML 纠错保留来源并更新画布',calls.length===n+2&&calls.slice(n).every(c=>c.headers.authorization==='Bearer personal-browser-fixture')&&evalJson(st).model.includes('个人模型修改'));
+ const usage=(await request('/api/usage',undefined,'GET')).body.usage;check('列表预览计入平台额度，个人调用和 XML 重试只增加用户额度',usage.userCalls===4&&usage.platformCalls===3);ab(['screenshot',path.join(out,'03-chat.png')]);
+ hold=true;const count=calls.length,closedBefore=closed;generate('取消这次云端生成');await waitCall(count+1);await waitFor('流式思考状态','document.getElementById("chatList").textContent',s=>s.includes('正在思考'));ab(['click','#cancelBtn']);await waitFor('取消结束',st,s=>!s.busy);for(let i=0;i<100&&closed===closedBefore;i++)await new Promise(r=>setTimeout(r,20));hold=false;check('HTTPS代理流式进度可见，取消断开上游',closed===closedBefore+1&&calls.length===count+1);
+ await run(`return ${h}.flushSession();`);const saved=evalJson(st);const exit=new Promise(r=>app.child.once('exit',r));app.stop();await exit;app=await startServer({port:8276,env});ab(['reload']);await waitFor('重启恢复',st,s=>s.ready&&!s.sessionBusy);const restoredUsage=(await request('/api/usage',undefined,'GET')).body.usage;check('重启保留用户、个人配置、额度与浏览器对话',restoredUsage.userCalls===5&&evalJson(st).model===saved.model&&evalJson(st).history.length===saved.history.length&&evalJson(`${h}.state.modelCatalog.providers.some(p=>p.providerId==='personal:shared')`));
+ ab(['set','viewport','390','844']);ab(['click','#cloudAccountSummary']);ab(['screenshot',path.join(out,'04-mobile.png')]);check('窄屏账号菜单可见且不超出屏幕',evalJson('(()=>{const r=document.querySelector(".cloud-account-panel").getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;})()'));ab(['click','#cloudLogoutBtn']);await waitFor('窄屏登录页','location.pathname',s=>s==='/login.html');ab(['screenshot',path.join(out,'05-mobile-login.png')]);
+ ab(['set','viewport','1280','900']);await login('admin');check('换回管理员恢复独立草稿和图表，个人 API 不串账号',evalJson(st).draft==='管理员未发送草稿'&&evalJson(st).model.includes('value="处理"')&&!evalJson(`${h}.state.modelCatalog.providers.some(p=>p.providerId==='personal:shared')`));
+}catch(e){check('云端真实浏览器验收执行',false,e.stack);try{ab(['screenshot',path.join(out,'failure.png')]);fs.writeFileSync(path.join(out,'failure.txt'),ab(['snapshot']).out);}catch{}}finally{
+ fs.writeFileSync(path.join(out,'results.json'),JSON.stringify({httpsReverseProxy:true,realEditor:true,simulatedModel:true,results},null,2));ab(['close'],{allowFail:true});app.stop();proxy.kill('SIGTERM');gateway.closeAllConnections();await new Promise(r=>gateway.close(r));
+}
+console.log(`${results.length-failures()}/${results.length} passed; ${out}`);if(failures())process.exitCode=1;
+else for(const file of ['failure.png','failure.txt'])fs.rmSync(path.join(out,file),{force:true});
