@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "title": "校园图书借阅系统",
+  "summary": "读者查询并借阅有库存的图书，管理员维护图书资料和借阅记录。",
+  "flowchart": {
+    "nodes": [
+      { "id": "start", "label": "开始借阅", "type": "start" },
+      { "id": "search", "label": "搜索并选择图书", "type": "process" },
+      { "id": "stock", "label": "是否有可借库存？", "type": "decision" },
+      { "id": "borrow", "label": "登记借阅并更新库存", "type": "process" },
+      { "id": "unavailable", "label": "提示暂时无库存", "type": "process" },
+      { "id": "end", "label": "结束本次操作", "type": "end" }
+    ],
+    "edges": [
+      { "source": "start", "target": "search", "label": "" },
+      { "source": "search", "target": "stock", "label": "" },
+      { "source": "stock", "target": "borrow", "label": "有库存" },
+      { "source": "stock", "target": "unavailable", "label": "无库存" },
+      { "source": "borrow", "target": "end", "label": "借阅成功" },
+      { "source": "unavailable", "target": "end", "label": "" }
+    ]
+  },
+  "architecture": {
+    "layers": [
+      { "id": "clients", "label": "访问入口", "nodes": [
+        { "id": "reader", "label": "读者端", "description": "查询图书、提交借阅" },
+        { "id": "admin", "label": "管理后台", "description": "维护图书和借阅记录" }
+      ] },
+      { "id": "services", "label": "业务服务", "nodes": [
+        { "id": "catalog", "label": "图书服务", "description": "图书检索和库存管理" },
+        { "id": "lending", "label": "借阅服务", "description": "借阅登记和记录维护" }
+      ] },
+      { "id": "data", "label": "数据存储", "nodes": [
+        { "id": "database", "label": "业务数据库", "description": "保存图书资料及借阅记录" }
+      ] }
+    ],
+    "edges": [
+      { "source": "reader", "target": "catalog", "label": "查询图书" },
+      { "source": "reader", "target": "lending", "label": "提交借阅" },
+      { "source": "admin", "target": "catalog", "label": "维护图书" },
+      { "source": "admin", "target": "lending", "label": "维护记录" },
+      { "source": "catalog", "target": "database", "label": "图书与库存" },
+      { "source": "lending", "target": "database", "label": "借阅记录" }
+    ]
+  },
+  "assumptions": [
+    "这是本地演示使用的固定示例结构，不是模型对当前文档的真实分析。",
+    "为方便演示，借阅和库存采用同一个业务数据库；实际部署方式需要确认。"
+  ]
+}
