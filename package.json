@@ -1,0 +1,40 @@
+{
+  "name": "ai-diagram-studio",
+  "version": "0.2.0",
+  "private": true,
+  "description": "自然语言生成 / 修改 draw.io 图表，支持对话与文档输入",
+  "type": "commonjs",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "test:session": "node tests/e2e/session-e2e.mjs",
+    "test:e2e": "node tests/e2e/run-e2e.mjs",
+    "test:repro": "node tests/repro/repro-acceptance.mjs",
+    "test:all": "npm test && npm run test:session && npm run test:e2e",
+    "test:stream": "node tests/e2e/streaming-e2e.mjs",
+    "test:edit": "node tests/e2e/local-edit-e2e.mjs",
+    "test:vision": "node tests/e2e/vision-e2e.mjs",
+    "test:cloud": "node tests/e2e/cloud-e2e.mjs",
+    "test:password": "node tests/e2e/password-e2e.mjs",
+    "test:usage": "node tests/e2e/usage-e2e.mjs",
+    "test:reasoning": "node tests/e2e/reasoning-slider-e2e.mjs",
+    "test:composer": "node tests/e2e/composer-controls-e2e.mjs",
+    "audit": "node scripts/frontend-audit.mjs",
+    "audit:baseline": "node scripts/frontend-audit.mjs --save .audit-baseline.json",
+    "audit:compare": "node scripts/frontend-audit.mjs --baseline .audit-baseline.json"
+  },
+  "dependencies": {
+    "mammoth": "1.13.0",
+    "pdfjs-dist": "6.4.299",
+    "yauzl": "3.4.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Funnys233/ai-diagram-studio.git"
+  }
+}
